@@ -1,0 +1,2331 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>IWP</title>
+<meta name="theme-color" content="#ECE8DF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IWP">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;1,6..72,300&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+/* Built for the daily pass, not a demo. Opening page answers "what needs me
+   today" and "where do I stand"; one tap down is the ledger with its workings.
+   Palette and type from Burmese lacquerware and account books: teak, brass,
+   jade, cinnabar; money set in a book serif, not a dashboard sans. */
+:root{
+  --bg:#ECE8DF; --sheet:#FAF8F3; --ink:#1F1D18; --muted:#7A7466; --rule:#D8D2C4;
+  --earned:#92651A; --held:#2C6850; --spent:#9A4030; --brass:#B08A3E;
+  --serif:"Newsreader",Georgia,"Songti SC",serif;
+  --sans:"Archivo",-apple-system,BlinkMacSystemFont,"Noto Sans Myanmar","Myanmar Sangam MN","Padauk","PingFang SC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15140F; --sheet:#1E1C17; --ink:#EDE8DC; --muted:#8C8576; --rule:#312E26;
+  --earned:#D2A049; --held:#5FA384; --spent:#D1796A; --brass:#C9A05C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15140F; --sheet:#1E1C17; --ink:#EDE8DC; --muted:#8C8576; --rule:#312E26;
+  --earned:#D2A049; --held:#5FA384; --spent:#D1796A; --brass:#C9A05C; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 84px}
+.n{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.blurred .hide{filter:blur(9px);user-select:none}
+
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:18px 10px;border-bottom:1px solid var(--rule)}
+.back{background:none;border:none;color:var(--muted);font-size:17px;padding:4px 8px 4px 0;line-height:1;cursor:pointer}
+.back:hover{color:var(--ink)}
+.mark{font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:.14em;margin:0;flex:1;min-width:0}
+.mark i{font-style:normal;color:var(--brass)}
+.mark.page{letter-spacing:0;font-size:18px}
+.ctl{display:flex;gap:6px;flex-wrap:wrap}
+button,select,input{font-family:var(--sans)}
+button,select{font-size:13px;cursor:pointer}
+.chip{background:none;border:1px solid var(--rule);color:var(--muted);padding:6px 11px;border-radius:2px}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+select.chip{padding-right:26px;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+
+/* needs you today */
+.todo{border:1px solid var(--rule);border-left:3px solid var(--spent);background:var(--sheet);margin-block:20px}
+.todo.calm{border-left-color:var(--held)}
+.todo h2{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  margin:0;padding:14px 16px 0}
+.todoItem{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--rule);margin-top:10px}
+.todoItem:first-of-type{margin-top:10px}
+.todoItem .tl{flex:1;min-width:0}
+.todoItem .tt{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todoItem .ts{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45}
+.todoItem .ta{font-family:var(--serif);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.todoItem .ta.late{color:var(--spent)} .todoItem .ta.soon{color:var(--earned)}
+.todoGo{background:none;border:1px solid var(--rule);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:2px;flex:0 0 auto}
+.todoGo:hover{border-color:var(--ink);color:var(--ink)}
+.allclear{padding:14px 16px 16px;color:var(--muted);font-size:13.5px}
+
+/* position */
+.pos{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+  border:1px solid var(--rule);margin-block:22px}
+.cell{background:var(--bg);padding:15px 14px}
+.cell .k{display:block;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cell .v{display:block;font-family:var(--serif);font-size:clamp(18px,4.2vw,23px);font-weight:600;
+  font-variant-numeric:tabular-nums;margin-top:6px;line-height:1.15;letter-spacing:-.02em;
+  overflow-wrap:anywhere}
+.cell .s{display:block;font-size:11.5px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.cell.wide{grid-column:1/-1;background:var(--sheet)}
+.cell.wide .v{font-size:clamp(24px,6vw,32px)}
+
+.statement{background:var(--sheet);border:1px solid var(--rule);padding:18px;margin-block:22px}
+.srow{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-block:8px;border-bottom:1px solid var(--rule)}
+.srow:last-of-type{border-bottom:none}
+.srow .k{color:var(--muted);font-size:13.5px}
+.srow .v{font-family:var(--serif);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.srow.net{border-top:2px solid var(--ink);border-bottom:none;margin-top:6px;padding-top:12px}
+.srow.net .k{color:var(--ink);font-weight:600;font-size:15px}
+.srow.net .v{font-size:clamp(23px,5vw,29px)}
+.v.e{color:var(--earned)} .v.s{color:var(--spent)}
+.aside{margin-top:13px;padding-top:11px;border-top:1px dashed var(--rule);font-size:12.5px;color:var(--muted);line-height:1.6}
+.aside+.aside{margin-top:8px;padding-top:8px}
+.aside b{color:var(--held)} .aside b.warn{color:var(--earned)}
+
+.band{display:flex;height:28px;border-radius:2px;overflow:hidden;border:1px solid var(--rule);margin-block:12px 10px}
+.band i{display:block;height:100%}
+.lg{display:flex;align-items:baseline;gap:10px;padding-block:7px;border-bottom:1px solid var(--rule);font-size:13.5px}
+.lg:last-child{border-bottom:none}
+.sw{width:11px;height:11px;border-radius:2px;flex:0 0 auto;transform:translateY(1px)}
+.lg .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg .pc{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.lg .vl{font-variant-numeric:tabular-nums;font-weight:600}
+
+.mods{border-top:1px solid var(--rule)}
+.mod{display:flex;align-items:center;gap:13px;width:100%;background:none;border:none;border-bottom:1px solid var(--rule);
+  padding:16px 2px;cursor:pointer;text-align:left;color:var(--ink)}
+.mod:hover{background:rgba(0,0,0,.02)}
+.mod .dot{width:4px;align-self:stretch;border-radius:2px;flex:0 0 auto}
+.mod .l{flex:1;min-width:0}
+.mod .t{display:block;font-size:15.5px;font-weight:600;line-height:1.3}
+.mod .m{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+.mod .m .warn{color:var(--spent);font-weight:600}
+.mod .r{text-align:right;flex:0 0 auto}
+.mod .v{display:block;font-family:var(--serif);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mod .v.zero{color:var(--muted);font-weight:400}
+.mod .sv{display:block;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.mod .ch{color:var(--rule);font-size:15px;flex:0 0 auto}
+.mod:hover .ch{color:var(--brass)}
+
+.mhead{padding-block:20px 6px}
+.mhead .big{font-family:var(--serif);font-size:clamp(26px,6.6vw,34px);font-weight:600;line-height:1.05;margin:0;letter-spacing:-.02em}
+.mhead .sub{color:var(--muted);font-size:13px;margin:8px 0 0;max-width:58ch;line-height:1.55}
+.how{background:var(--sheet);border:1px solid var(--rule);border-left:3px solid var(--brass);padding:12px 15px;
+  margin-block:16px;font-size:13px;color:var(--muted);line-height:1.6}
+.how b{color:var(--ink)}
+.srch{width:100%;padding:10px 12px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);
+  border-radius:2px;font-size:15px;margin-bottom:4px}
+.srch:focus{outline:none;border-color:var(--brass);background:var(--bg)}
+
+.card{border-bottom:1px solid var(--rule)}
+.card.settled .cname{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.ctop{display:block;width:100%;background:none;border:none;padding:14px 2px;cursor:pointer;text-align:left;color:var(--ink)}
+.ctop:hover{background:rgba(0,0,0,.02)}
+.crow{display:flex;align-items:baseline;gap:12px}
+.cname{font-weight:600;font-size:15.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flag{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:2px;
+  flex:0 0 auto;border:1px solid}
+.flag.late{color:var(--spent);border-color:var(--spent)}
+.flag.soon{color:var(--earned);border-color:var(--earned)}
+.flag.done{color:var(--held);border-color:var(--held)}
+.flag.open{color:var(--brass);border-color:var(--brass)}
+.cnum{font-family:var(--serif);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.cnum.e{color:var(--earned)} .cnum.s{color:var(--spent)}
+.cmeta{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+.cbody{padding:0 2px 18px}
+.dl{display:flex;justify-content:space-between;gap:14px;padding-block:7px;border-bottom:1px solid var(--rule);font-size:13.5px}
+.dl:last-of-type{border-bottom:none}
+.dl dt{color:var(--muted);margin:0} .dl dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.dl dd.e{color:var(--earned)} .dl dd.h{color:var(--held)} .dl dd.q{color:var(--muted);font-weight:400}
+.subhead{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:17px 0 8px}
+
+.mrow{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--rule);margin-bottom:5px;
+  cursor:pointer;background:var(--sheet);border-radius:2px}
+.mrow:hover{border-color:var(--muted)}
+.mrow.done{border-color:var(--held);background:rgba(44,104,80,.07)}
+.mrow.late{border-color:var(--spent)}
+.mrow.wait{opacity:.5;cursor:default;border-style:dashed}
+.box{width:17px;height:17px;flex:0 0 auto;border:1.5px solid var(--rule);border-radius:2px;display:flex;
+  align-items:center;justify-content:center;font-size:10px;color:transparent}
+.mrow.done .box{background:var(--held);border-color:var(--held);color:var(--sheet)}
+.mrow .dt{flex:1;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.mrow.done .dt{color:var(--held)} .mrow.late .dt{color:var(--spent)}
+.mrow .on{font-size:11px;color:var(--held);font-variant-numeric:tabular-nums}
+.mrow .va{font-weight:600;font-variant-numeric:tabular-nums;font-size:14px}
+.mrow.done .va{color:var(--held)}
+
+.mv{display:flex;align-items:center;gap:10px;padding-block:7px;border-bottom:1px solid var(--rule);font-size:13px}
+.mv:last-of-type{border-bottom:none}
+.mv .k{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;width:58px;flex:0 0 auto}
+.mv .k.r{color:var(--held)} .mv .k.d{color:var(--earned)}
+.mv .dt{flex:1;color:var(--muted);font-variant-numeric:tabular-nums}
+.mv .vv{font-variant-numeric:tabular-nums;font-weight:600}
+.x{background:none;border:none;color:var(--rule);font-size:16px;padding:0 2px;line-height:1;cursor:pointer}
+.x:hover{color:var(--spent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;align-items:end;margin-top:12px}
+.grid .wide{grid-column:1/-1}
+label{display:block;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+input[type=text],input[type=number],input[type=date],select.fld{font-size:16px;padding:10px 12px;border:1px solid var(--rule);
+  background:var(--bg);color:var(--ink);border-radius:2px;width:100%;font-variant-numeric:tabular-nums}
+input:focus,select.fld:focus{outline:none;border-color:var(--brass);background:var(--sheet)}
+.solid{background:var(--ink);color:var(--bg);border:1px solid var(--ink);padding:11px 18px;border-radius:2px;font-weight:600;font-size:14px}
+.solid:hover{background:var(--brass);border-color:var(--brass);color:#fff}
+.acts{display:flex;gap:15px;flex-wrap:wrap;margin-top:15px;padding-top:12px;border-top:1px solid var(--rule)}
+.act{background:none;border:none;padding:0;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer}
+.act:hover{color:var(--ink)} .act.key{color:var(--brass);font-weight:600} .act.bad:hover{color:var(--spent)}
+.panel{background:var(--sheet);border:1px solid var(--rule);padding:16px;margin-block:14px}
+.hint{font-size:12.5px;color:var(--muted);margin:11px 0 0;line-height:1.55}
+.err{color:var(--spent);font-size:13px;margin-top:10px}
+.note{background:var(--sheet);border:1px solid var(--rule);border-left:3px solid var(--brass);padding:12px 15px;
+  margin-block:16px;font-size:13px;color:var(--muted);line-height:1.55;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.note span{flex:1;min-width:160px} .note b{color:var(--ink)}
+.blank{padding:32px 4px;text-align:center;color:var(--muted);font-size:14px;border-bottom:1px solid var(--rule)}
+.blank b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px;font-size:15px}
+/* a quiet (i) that opens a plain-language note under the thing it explains */
+.i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
+  border:1px solid var(--rule);background:none;color:var(--muted);font-size:10px;font-weight:700;
+  font-family:var(--serif);font-style:italic;line-height:1;cursor:pointer;padding:0;margin-left:6px;
+  vertical-align:middle;flex:0 0 auto}
+.i:hover{border-color:var(--brass);color:var(--brass)}
+.i[aria-expanded="true"]{background:var(--brass);border-color:var(--brass);color:#fff}
+.inote{background:var(--bg);border:1px solid var(--rule);border-left:3px solid var(--brass);
+  padding:12px 14px;margin:10px 0 2px;font-size:13px;line-height:1.6;color:var(--ink)}
+.inote b{font-weight:600}
+.inote .eg{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);
+  color:var(--muted);font-size:12.5px}
+.hbox{background:var(--sheet);border:1px solid var(--rule);padding:16px 18px;margin-block:10px}
+.hbox+.hbox{margin-top:-1px}
+.hrow{display:flex;align-items:baseline;gap:12px}
+.hk{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);flex:1;min-width:0}
+.hv{font-family:var(--serif);font-size:25px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.hv.good{color:var(--held)} .hv.warn{color:var(--earned)} .hv.bad{color:var(--spent)}
+.hs{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.agebar{display:flex;height:16px;border-radius:2px;overflow:hidden;border:1px solid var(--rule);margin:12px 0 10px}
+.agebar i{display:block;height:100%}
+.agekey{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.agekey span{display:flex;align-items:baseline;gap:5px}
+.agekey b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.quick{display:flex;gap:8px;flex-wrap:wrap;padding:10px 2px 2px}
+.qbtn{background:var(--sheet);border:1px solid var(--rule);color:var(--ink);font-size:12.5px;font-weight:600;
+  padding:7px 12px;border-radius:2px;cursor:pointer}
+.qbtn:hover{border-color:var(--brass);color:var(--brass)}
+.fxnow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.fxnow b{font-family:var(--serif);font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.fxrow{display:flex;gap:10px;align-items:baseline;padding-block:6px;border-bottom:1px solid var(--rule2);font-size:12.5px}
+.fxrow:last-child{border-bottom:none}
+.fxrow .d{color:var(--muted);flex:1;font-variant-numeric:tabular-nums}
+.fxrow .r{font-weight:600;font-variant-numeric:tabular-nums}
+.fxrow .c{font-size:11.5px}
+.fxrow .c.up{color:var(--spent)} .fxrow .c.dn{color:var(--held)}
+.datout{width:100%;min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.45;
+  padding:10px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:2px;resize:vertical}
+.undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:3px;display:flex;gap:14px;align-items:center;
+  font-size:13.5px;z-index:20;box-shadow:0 6px 22px rgba(0,0,0,.22);max-width:calc(100vw - 32px)}
+.undo button{background:none;border:none;color:var(--brass);font-weight:700;font-size:13.5px;cursor:pointer;padding:0}
+section{padding-block:22px}
+h3{font-family:var(--serif);font-size:18px;font-weight:600;margin:0 0 4px}
+.sublede{color:var(--muted);font-size:13px;margin:0 0 14px;max-width:58ch}
+footer{color:var(--muted);font-size:11.5px;line-height:1.7;border-top:1px solid var(--rule);padding-block:16px 0;margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap" id="root">
+  <header>
+    <button class="back" id="back" hidden aria-label="Back">&#8592;</button>
+    <h1 class="mark" id="mark">I<i>W</i>P</h1>
+    <div class="ctl">
+      <select class="chip" id="year" aria-label="Year"></select>
+      <button class="chip" id="lang">EN</button>
+      <button class="chip" id="more">More</button>
+    </div>
+  </header>
+  <div id="menuSlot"></div>
+  <div id="screen"></div>
+  <footer id="foot"></footer>
+  <div id="undoSlot"></div>
+  <input type="file" id="impFile" accept=".json,application/json" hidden>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var APP_VER="v11 \u00b7 Email link";          /* shown in the footer; bump every release */
+var KEY="iwp_v4";                   /* never rename: live data sits under it */
+var DBN="iwp_db",STORE="state";     /* IndexedDB mirror, survives a space squeeze */
+var FBKEY="iwp_fb_v1";              /* this install's Firebase settings, never synced */
+var MAILKEY="iwp_mail_v1";          /* the address this device asked for a link with */
+
+var S={cur:"MMK",lang:"en",year:null,items:[],blur:false,backupAt:0,seeded:false,fx:[],fxRef:"USD",
+       rev:{},dead:{}};
+/* rev[id] = when this device last changed that record; dead[id] = when it deleted one.
+   A tombstone has to outlive the record, or a device that never heard about the
+   delete uploads the record again and brings it back. */
+
+try{var raw=localStorage.getItem(KEY);if(raw){var p0=JSON.parse(raw);if(p0&&Array.isArray(p0.items))S=Object.assign(S,p0);}}catch(e){}
+if(!S.rev||typeof S.rev!=="object")S.rev={};
+if(!S.dead||typeof S.dead!=="object")S.dead={};
+var NOW=new Date();
+
+/* Nothing may be written until boot has finished reading. A half-loaded empty
+   state saved over real data is the one unrecoverable bug. */
+var loaded=false;
+
+/* ---------- the device keeps two copies ---------- */
+var idb=null;
+function idbOpen(cb){
+  if(idb)return cb(idb);
+  try{
+    var rq=indexedDB.open(DBN,1);
+    rq.onupgradeneeded=function(){try{rq.result.createObjectStore(STORE);}catch(e){}};
+    rq.onsuccess=function(){idb=rq.result;cb(idb);};
+    rq.onerror=function(){cb(null);};
+  }catch(e){cb(null);}
+}
+function idbPut(k,v){idbOpen(function(d){if(!d)return;
+  try{d.transaction(STORE,"readwrite").objectStore(STORE).put(v,k);}catch(e){}});}
+function idbGet(k,cb){idbOpen(function(d){if(!d)return cb(null);
+  try{var r=d.transaction(STORE,"readonly").objectStore(STORE).get(k);
+    r.onsuccess=function(){cb(r.result||null);};r.onerror=function(){cb(null);};
+  }catch(e){cb(null);}});}
+
+/* ---------- what changed here, and when ---------- */
+var SEEN={};
+function sig(o){try{return JSON.stringify(o);}catch(e){return String(o);}}
+/* settings travel as one record called "core" so they merge like any other */
+function coreOf(){return {cur:S.cur,lang:S.lang,fx:S.fx,fxRef:S.fxRef,blur:S.blur};}
+function seedSeen(stamp){
+  SEEN={};
+  S.items.forEach(function(it){
+    if(!it.id)it.id=uid();
+    SEEN[it.id]=sig(it);
+    if(stamp&&!S.rev[it.id])S.rev[it.id]=stamp;
+  });
+  SEEN.core=sig(coreOf());
+  if(stamp&&!S.rev.core)S.rev.core=stamp;
+}
+function trackLocal(){
+  if(!loaded)return;
+  var now=Date.now(),here={};
+  S.items.forEach(function(it){
+    if(!it.id)it.id=uid();
+    here[it.id]=1;
+    var g=sig(it);
+    if(SEEN[it.id]!==g){SEEN[it.id]=g;S.rev[it.id]=now;delete S.dead[it.id];}
+  });
+  Object.keys(SEEN).forEach(function(id){
+    if(id==="core"||here[id])return;
+    delete SEEN[id];delete S.rev[id];S.dead[id]=now;   /* tombstone */
+  });
+  var cg=sig(coreOf());
+  if(SEEN.core!==cg){SEEN.core=cg;S.rev.core=now;}
+}
+function save(){
+  if(!loaded)return;
+  trackLocal();
+  var j;try{j=JSON.stringify(S);}catch(e){return;}
+  try{localStorage.setItem(KEY,j);}catch(e){}
+  idbPut(KEY,j);
+  if(typeof syncPush==="function")syncPush();
+}
+
+
+/* Two languages, one tap. Keys read like the English so the code stays legible. */
+var L={
+ en:{
+  syncLabel:"Across your devices",syncTitle:"Sync",syncSave:"Save and connect",
+  syncOff:"Not set up",syncProblem:"Problem \u2014 open to see",syncSignedOut:"Signed out",
+  syncSaving:"Saving\u2026",syncedAt:"Synced %d",syncOn:"On",
+  syncSetup:"Set up sync",
+  syncPasteNote:"Paste the Firebase settings for the project you already use (apiKey, authDomain, projectId, appId). Copy them from your expense tracker so one account opens both apps. They stay on this device.",
+  syncBadCfg:"That does not look like Firebase settings \u2014 it needs apiKey, projectId and appId.",
+  syncSignIn:"Sign in",syncChange:"Change settings",
+  syncSignInNote:"No sign-in code to remember. Type your email, we send you a link, you tap it. Use the same email on every device and they all share one book. Nothing leaves this phone until you sign in.",
+  syncEmailMe:"Email me a sign-in link",
+  syncOrPaste:"On an iPhone or iPad Home Screen?",
+  syncPasteHint:"Tapping the link opens Safari, and a Home Screen app keeps its own separate login. So instead: open the email, press and hold the link, Copy Link, come back here and paste it.",
+  syncLinkLbl:"Paste the link",
+  syncNeedLink:"Paste the link from the email.",
+  syncBadLink:"That is not a sign-in link. Copy the whole link from the email, including everything after the question mark.",
+  syncCheckMail:"Check your email",
+  syncSentNote:"A sign-in link is on its way to %e. Open it on this device. The link works once and expires.",
+  syncAnother:"Use a different email",
+  syncSigningIn:"Signing you in\u2026",
+  syncConfirm:"Confirm your email",
+  syncConfirmNote:"This device did not ask for the link, so it needs the email address you used.",
+  syncFinish:"Finish signing in",
+  syncNeedEmail:"Enter the email address you want the link sent to.",
+  syncEmail:"Email",syncNoNet:"Could not reach the sync service. The book still works and saves on this device.",
+  syncHello:"Signed in \u2014 your devices will keep each other up to date.",
+  syncAccount:"Account",syncStatus:"Status",syncNow:"Sync now",syncSignOut:"Sign out",
+  syncNote:"This device is the one that counts. The cloud only carries changes between your phone, iPad and PC \u2014 newest change wins, and a delete travels too.",
+  syncWhich:"Which copy do you want to keep?",
+  syncWhichNote:"This device holds %a entries and the account holds %b. They are different books, so nothing is merged until you say which one is right. The other copy is handed back to you as a file.",
+  syncKeepDevice:"Keep this device (%n)",syncKeepAccount:"Keep the account (%n)",
+  syncReplaced:"Done \u2014 the copy that was replaced is downloading as a backup file.",
+  notDueYet:"not due yet",lentMore:"Lent",
+  mRate:"%r%/mo",mRunning:"%d running",mRepaid:"%v repaid",mLentAgain:"%v lent again",
+  mSettled:"settled %d",mOut:"%v out",mUnpaid:"%n months unpaid",mUnpaid1:"1 month unpaid",
+  mRent:"%v/mo",mMonthsIn:"%m mo in %y",mCollected:"%v collected",
+  aUnpaid:"%n months of interest uncollected, oldest %d",
+  aUnpaid1:"1 month of interest uncollected, oldest %d",
+  aTermEnded:"term ended %d and rent is not marked collected",
+  aTermEnds:"term ends %d, in %n days",
+  back:"Back", cost:"Cost", outstanding:"%v outstanding", rentDueIn:"%v rent due",
+  stillDue:"%v rent earned but not collected", stillOut:"%v still outstanding",
+  stillTied:"%v tied up in rounds not yet sold", tiedUpIn:"%v tied up",
+  needs:"Needs you",allclear:"Nothing outstanding",
+  allclearBody:"Every month is collected and no term has run out. The next thing due will show up here.",
+  andMore:"and %n more.",open:"Open",
+  profitIn:"Profit so far in %y",earnedLess:"%e earned \u2212 %c costs",earnedOnly:"%e earned",notReceived:"%v not yet received",
+  outOnLoan:"Out on loan",perYear:"%v a year",collected:"Collected",ofEarned:"%a of %b",
+  ledgers:"Your ledgers",ledgersSub:"Money earned and money collected, from lending, trading and leasing. Tap in to see the workings.",
+  entry:"entry",entries:"entries",nothingYet:"nothing yet",needChasing:"%n need chasing",setAside:"Set aside <b>%n</b> holdings and cash entries \u2014 this book follows lending, trading and leasing. They are still in your backup file.",
+  whoOwes:"Who owes you",whoOwesSub:"%n people across both loan ledgers \u00b7 %v",
+  statement:"Statement",statementSub:"Only what %y itself produced, up to today.",
+  incomeEarned:"Income earned",costs:"Costs",profit:"Profit",
+  asideUncollected:"Of that, <b class=\"warn\">%v has not reached you yet</b> \u2014 interest still riding on a loan, or rent for a term not settled. Earned, but not cash in hand.",
+  asideConc:"<b class=\"warn\">%p% of the money you have out sits with one borrower</b> (%n). Worth knowing before you lend again.",
+  wealth:"Where your money is",wealthSub:"%v out there and not yet back in your hand",
+  fGoodsCost:"What the goods cost",fOtherCost:"Other costs (transport, brokerage)",
+  totalIn:"Total put in",
+  health:"How the book is doing",healthSub:"Four readings a total cannot give you.",
+  ageTitle:"Money out, by how late it is",ageCurrent:"On time",age1:"1 month",age23:"2\u20133 months",age3:"3+ months",
+  ageNote:"Money past three months rarely comes back in full.",
+  xirrTitle:"True return",xirrSub:"Counts when each kyat went out and came back",xirrVsSimple:"The simple figure says %v",
+  realTitle:"After the kyat moves",realSub:"%n% nominal becomes %r% once the currency is counted",
+  realNeed:"Enter an exchange rate to see this",realFlat:"No rate change recorded yet",
+  beTitle:"Room for bad debts",beSub:"At your average %r%/mo you can lose %p% of the book a year and still break even",
+  lang:"\u4e2d\u6587",
+  more:"More",
+  /* module page */
+  earnedIn:"Earned in %y",addA:"Add a %o",close:"Close",search:"Search %m",
+  nothingHere:"Nothing here yet",addFirst:"Add your first %o above.",noMatch:"No match",noMatchSub:"Nothing here is called \u201c%q\u201d.",
+  chase:"chase",due:"due",clear:"clear",
+  /* loan detail */
+  lent:"Lent",lentOn:"%v on %d",rate:"Rate",ratePerMonth:"%r% a month",sameYearly:"Same as a yearly rate",
+  yearlyCompound:"%r% compounding",runningFor:"Running for",interestIn:"Interest earned in %y",
+  interestSince:"Interest since day one",intReceived:"Interest received in %y",inclEarlier:"(includes %v earned earlier)",
+  capitalBack:"Capital returned in %y",notIncome:"%v \u2014 not income",owedNow:"Owed right now",settledLbl:"Settled",
+  note:"Note",principalOut:"Principal outstanding",cleanMonth:"A clean month costs them",
+  rolledIn:"Unpaid interest rolled in",nextMonth:"Next month will be",nextOn:"%v on %d",
+  eachMonth:"Each month \u00b7 tap to mark collected",firstNotDue:"First month isn\u2019t due yet.",
+  showingLast:"Showing the last 12 of %n months.",movements:"Payments and further lending",noMovements:"None yet \u2014 the balance is still the original amount.",
+  paid:"Paid",whatHappened:"What happened",theyPaid:"They paid",iLentMore:"I lent more",
+  amount:"Amount",date:"Date",recordIt:"Record it",
+  /* lease */
+  rentMonthly:"Rent",rentPerMonth:"%v a month",term:"Term",ongoing:"ongoing",
+  monthsInside:"Months inside %y",rentFor:"Rent for %y",collectedSoFar:"Collected so far",stillToCollect:"Still to collect",
+  landWorth:"Land worth",rentReceived:"Rent received",noRentYet:"Nothing received against this lease yet.",
+  /* others */
+  soldFor:"Sold for",profitLbl:"Profit",margin:"Margin",countedIn:"Counted in",
+  earIs:"same as %v a year",
+  avgBalLbl:"Interest is charged on",avgBalNote:"the day-weighted average balance",
+  heldLbl:"Held for",monthsUnit:"%m months",
+  fBoughtOn:"Bought on",fSoldOnOpt:"Sold on (leave blank if still holding)",
+  boughtLbl:"Bought",heldMo:"held %m months",heldSoFar:"%m months so far",
+  tiedUpLbl:"Money tied up",perMonthHeld:"Per month held",
+  roundOpen:"Not sold yet",closeRound:"Record the sale",roundNote:"Nothing counts as profit until you sell. Until then the cost shows as money tied up.",
+  eBuyDate:"Enter a valid date for when you bought it.",
+  eSellAfter:"The sale cannot be before the day you bought it.",
+  eSoldFor:"Enter what it sold for, or clear the sale date to keep holding it.",
+  eCostPos:"Enter what the goods cost you.",
+  soldForLbl:"Sold for",soldOn:"Sold on",/* actions */
+  editDetails:"Edit details",markSettled:"Mark settled",reopen:"Reopen",del:"Delete",save:"Save changes",add:"Add",
+  undoDeleted:"Deleted %n",undo:"Undo",undoRemovedPay:"Removed payment of %v",undoRemovedLend:"Removed loan of %v",
+  undoRemovedRent:"Removed rent payment of %v",undoSold:"Sold %n for %v",
+  /* fields */
+  fBorrower:"Borrower",fAmountLent:"Amount lent",fPrincipal:"Principal",fRateMo:"Rate % per month",
+  fLentOn:"Lent on",fNote:"Note or collateral",fName:"Name",fRent:"Rent per month",fStarts:"Term starts",
+  fEnds:"Term ends (blank = ongoing)",fWhatItWas:"What it was",
+  fTotalSold:"Total sold for",/* errors */
+  eName:"Give it a name so you recognise it later.",eHowMuch:"Enter how much you lent.",
+  eRate:"The monthly rate should be between 0 and 100.",eDateValid:"Enter a valid date for when you lent it.",
+  eFuture:"That date is in the future.",eRent:"Enter the monthly rent.",eStart:"Enter a valid start date.",
+  eEndDate:"That end date isn\u2019t a real date.",eEndAfter:"The term has to end after it starts.",
+  eSaleDate:"Enter a valid sale date.",
+  eAmount:"Enter the amount.",eDate:"Enter a valid date.",
+  eNotNumber:"\u201c%f\u201d isn\u2019t a number. Type digits only, no commas.",
+  eAmtNotNumber:"That amount isn\u2019t a number. Type digits only, no commas.",
+  eBeforeLent:"That is before you lent the money.",
+  eMoreThanOwed:"That is more than the %v they owe in total.",
+  eOverRent:"That brings the total to %a, more than the %b this lease has earned.",
+  eSoldFor:"Enter what it sold for.",
+  /* menu */
+  currency:"Currency",privacy:"Privacy",hideFigures:"Hide figures",showFigures:"Show figures",
+  yourData:"Your data",backUp:"Back up to a file",restoreFile:"Restore from a file",restorePaste:"Restore from pasted text",
+  forAccountant:"For your accountant",exportSheet:"Export %y as a sheet",
+  restoreNote:"Restore accepts an IWP backup or a \u501f\u51fa\u8d26\u672c backup.",
+  fxTitle:"Exchange rate",fxSub:"Type the rate you actually get. Nothing is assumed.",
+  fxLabel:"1 %c buys this many %m",fxAgainst:"Against",fxSave:"Save this rate",
+  fxFirst:"First rate saved. Enter it again later and the change is worked out for you.",
+  fxChange:"%p% %dir since %d",weaker:"weaker",stronger:"stronger",fxHistory:"Rates you have saved",
+  fxNone:"No rate saved yet.",fxConfirm:"Save %v as today\u2019s rate?",fxYes:"Yes, save it",fxNo:"Cancel",
+  copyClip:"Copy to clipboard",copied:"Copied",selectCopy:"Select all, then copy",done:"Done",
+  loadIt:"Load it",cancel:"Cancel",pasteHere:"Paste an IWP backup or a \u501f\u51fa\u8d26\u672c backup here.",
+  pasteJSON:"Paste the JSON",notJSON:"That isn\u2019t valid JSON.",
+  savedAs:"Saved as <b>%n</b>. ",noFileHint:"If no file appeared, copy the text below and paste it into a file called <b>%n</b>.",
+  storedHere:"Stored in this browser only",neverBacked:"<b>never backed up</b>",lastBackup:"last backup %d",
+  recompute:"Figures recompute from the dates each time you open it.",
+  restored:"<b>Restored %n entries</b> from your IWP backup.",
+  imported:"<b>Imported %n records</b> from \u501f\u51fa\u8d26\u672c",skippedDup:" \u00b7 skipped %n already here",
+  nothingNew:"Nothing new \u2014 all %n records in that file are already here.",
+  noLoans:"No loans or leases found in that file.",badFile:"That file wouldn\u2019t parse as JSON.",
+  unreadable:"That file could not be read."
+ },
+ zh:{
+  syncLabel:"\u591a\u8bbe\u5907\u540c\u6b65",syncTitle:"\u540c\u6b65",syncSave:"\u4fdd\u5b58\u5e76\u8fde\u63a5",
+  syncOff:"\u5c1a\u672a\u8bbe\u7f6e",syncProblem:"\u6709\u95ee\u9898 \u2014 \u70b9\u5f00\u67e5\u770b",syncSignedOut:"\u672a\u767b\u5f55",
+  syncSaving:"\u6b63\u5728\u4fdd\u5b58\u2026",syncedAt:"%d \u5df2\u540c\u6b65",syncOn:"\u5df2\u5f00\u542f",
+  syncSetup:"\u8bbe\u7f6e\u540c\u6b65",
+  syncPasteNote:"\u7c98\u8d34\u4f60\u5df2\u5728\u7528\u7684 Firebase \u914d\u7f6e\uff08apiKey\u3001authDomain\u3001projectId\u3001appId\uff09\u3002\u4ece\u8bb0\u8d26\u5e94\u7528\u91cc\u590d\u5236\u8fc7\u6765\uff0c\u8fd9\u6837\u4e00\u4e2a\u8d26\u53f7\u5c31\u80fd\u6253\u5f00\u4e24\u4e2a\u5e94\u7528\u3002\u914d\u7f6e\u53ea\u5b58\u5728\u672c\u673a\u3002",
+  syncBadCfg:"\u8fd9\u4e0d\u50cf\u662f Firebase \u914d\u7f6e \u2014 \u9700\u8981 apiKey\u3001projectId \u548c appId\u3002",
+  syncSignIn:"\u767b\u5f55",syncChange:"\u66f4\u6539\u914d\u7f6e",
+  syncSignInNote:"\u4e0d\u7528\u5bc6\u7801\u3002\u8f93\u5165\u90ae\u7bb1\uff0c\u6211\u4eec\u53d1\u4e00\u6761\u94fe\u63a5\u7ed9\u4f60\uff0c\u70b9\u4e00\u4e0b\u5c31\u884c\u3002\u6bcf\u53f0\u8bbe\u5907\u7528\u540c\u4e00\u4e2a\u90ae\u7bb1\uff0c\u5c31\u5171\u7528\u4e00\u672c\u8d26\u3002\u767b\u5f55\u524d\uff0c\u6570\u636e\u4e0d\u4f1a\u79bb\u5f00\u8fd9\u90e8\u624b\u673a\u3002",
+  syncEmailMe:"\u53d1\u9001\u767b\u5f55\u94fe\u63a5",
+  syncOrPaste:"\u5728 iPhone \u6216 iPad \u4e3b\u5c4f\u5e94\u7528\u91cc\uff1f",
+  syncPasteHint:"\u70b9\u94fe\u63a5\u4f1a\u6253\u5f00 Safari\uff0c\u800c\u4e3b\u5c4f\u5e94\u7528\u6709\u81ea\u5df1\u72ec\u7acb\u7684\u767b\u5f55\u3002\u6240\u4ee5\u8bf7\u6539\u7528\uff1a\u6253\u5f00\u90ae\u4ef6\uff0c\u957f\u6309\u94fe\u63a5\uff0c\u9009\u201c\u62f7\u8d1d\u94fe\u63a5\u201d\uff0c\u56de\u5230\u8fd9\u91cc\u7c98\u8d34\u3002",
+  syncLinkLbl:"\u7c98\u8d34\u94fe\u63a5",
+  syncNeedLink:"\u8bf7\u7c98\u8d34\u90ae\u4ef6\u91cc\u7684\u94fe\u63a5\u3002",
+  syncBadLink:"\u8fd9\u4e0d\u662f\u767b\u5f55\u94fe\u63a5\u3002\u8bf7\u628a\u90ae\u4ef6\u91cc\u7684\u6574\u6761\u94fe\u63a5\u590d\u5236\u8fc7\u6765\uff0c\u5305\u62ec\u95ee\u53f7\u540e\u9762\u7684\u5168\u90e8\u5185\u5bb9\u3002",
+  syncCheckMail:"\u8bf7\u67e5\u6536\u90ae\u4ef6",
+  syncSentNote:"\u767b\u5f55\u94fe\u63a5\u5df2\u53d1\u5f80 %e\u3002\u8bf7\u5728\u672c\u8bbe\u5907\u4e0a\u6253\u5f00\u3002\u94fe\u63a5\u53ea\u80fd\u7528\u4e00\u6b21\uff0c\u8fc7\u671f\u5931\u6548\u3002",
+  syncAnother:"\u6362\u4e00\u4e2a\u90ae\u7bb1",
+  syncSigningIn:"\u6b63\u5728\u767b\u5f55\u2026",
+  syncConfirm:"\u786e\u8ba4\u90ae\u7bb1",
+  syncConfirmNote:"\u8fd9\u53f0\u8bbe\u5907\u4e0d\u662f\u7533\u8bf7\u94fe\u63a5\u7684\u90a3\u4e00\u53f0\uff0c\u9700\u8981\u4f60\u5f53\u65f6\u7528\u7684\u90ae\u7bb1\u5730\u5740\u3002",
+  syncFinish:"\u5b8c\u6210\u767b\u5f55",
+  syncNeedEmail:"\u8bf7\u586b\u5199\u63a5\u6536\u94fe\u63a5\u7684\u90ae\u7bb1\u5730\u5740\u3002",
+  syncEmail:"\u90ae\u7bb1",syncNoNet:"\u8fde\u4e0d\u4e0a\u540c\u6b65\u670d\u52a1\u3002\u8d26\u672c\u4ecd\u7136\u53ef\u7528\uff0c\u4e5f\u4ecd\u7136\u4fdd\u5b58\u5728\u672c\u673a\u3002",
+  syncHello:"\u5df2\u767b\u5f55 \u2014 \u4f60\u7684\u8bbe\u5907\u4f1a\u4e92\u76f8\u66f4\u65b0\u3002",
+  syncAccount:"\u8d26\u53f7",syncStatus:"\u72b6\u6001",syncNow:"\u7acb\u5373\u540c\u6b65",syncSignOut:"\u9000\u51fa\u767b\u5f55",
+  syncNote:"\u4ee5\u672c\u673a\u4e3a\u51c6\u3002\u4e91\u7aef\u53ea\u8d1f\u8d23\u5728\u624b\u673a\u3001iPad \u548c\u7535\u8111\u4e4b\u95f4\u4f20\u9012\u53d8\u66f4 \u2014 \u6700\u65b0\u7684\u6539\u52a8\u751f\u6548\uff0c\u5220\u9664\u4e5f\u4f1a\u540c\u6b65\u3002",
+  syncWhich:"\u4fdd\u7559\u54ea\u4e00\u4efd\uff1f",
+  syncWhichNote:"\u672c\u673a\u6709 %a \u6761\uff0c\u8d26\u53f7\u91cc\u6709 %b \u6761\u3002\u4e24\u8fb9\u662f\u4e0d\u540c\u7684\u8d26\u672c\uff0c\u6240\u4ee5\u5728\u4f60\u9009\u5b9a\u4e4b\u524d\u4e0d\u505a\u5408\u5e76\u3002\u6ca1\u9009\u4e2d\u7684\u90a3\u4efd\u4f1a\u4ee5\u6587\u4ef6\u5f62\u5f0f\u4ea4\u8fd8\u7ed9\u4f60\u3002",
+  syncKeepDevice:"\u4fdd\u7559\u672c\u673a\uff08%n\uff09",syncKeepAccount:"\u4fdd\u7559\u8d26\u53f7\uff08%n\uff09",
+  syncReplaced:"\u5b8c\u6210 \u2014 \u88ab\u66ff\u6362\u7684\u90a3\u4efd\u6b63\u5728\u4ee5\u5907\u4efd\u6587\u4ef6\u4e0b\u8f7d\u3002",
+  notDueYet:"\u672a\u5230\u671f",lentMore:"\u653e\u6b3e",
+  mRate:"\u6708\u606f %r%",mRunning:"\u5df2\u8fdb\u884c %d",mRepaid:"\u5df2\u8fd8 %v",mLentAgain:"\u8ffd\u501f %v",
+  mSettled:"%d \u7ed3\u6e05",mOut:"\u5728\u5916 %v",mUnpaid:"\u6b20 %n \u4e2a\u6708",mUnpaid1:"\u6b20 1 \u4e2a\u6708",
+  mRent:"\u6708\u79df %v",mMonthsIn:"%y \u5e74\u5185 %m \u4e2a\u6708",mCollected:"\u5df2\u6536 %v",
+  aUnpaid:"\u6b20 %n \u4e2a\u6708\u5229\u606f\u672a\u6536\uff0c\u6700\u65e9 %d",
+  aUnpaid1:"\u6b20 1 \u4e2a\u6708\u5229\u606f\u672a\u6536\uff0c\u6700\u65e9 %d",
+  aTermEnded:"%d \u5230\u671f\uff0c\u79df\u91d1\u5c1a\u672a\u6807\u8bb0\u4e3a\u5df2\u6536",
+  aTermEnds:"%d \u5230\u671f\uff0c\u8fd8\u6709 %n \u5929",
+  back:"\u8fd4\u56de", cost:"\u6210\u672c", outstanding:"\u5728\u5916 %v", rentDueIn:"\u5f85\u6536\u79df %v", stillDue:"%v \u79df\u91d1\u5df2\u751f\u672a\u6536", stillOut:"\u5728\u5916 %v", stillTied:"%v \u5360\u7528\u5728\u5c1a\u672a\u5356\u51fa\u7684\u8d27\u4e0a", tiedUpIn:"\u5360\u7528 %v",
+  
+  needs:"\u5f85\u5904\u7406",allclear:"\u6682\u65e0\u5f85\u529e",
+  allclearBody:"\u6bcf\u671f\u5229\u606f\u90fd\u5df2\u6536\u9f50\uff0c\u4e5f\u6ca1\u6709\u5230\u671f\u7684\u79df\u7ea6\u3002\u4e0b\u4e00\u4e2a\u5230\u671f\u7684\u4f1a\u51fa\u73b0\u5728\u8fd9\u91cc\u3002",
+  andMore:"\u8fd8\u6709 %n \u6761\u3002",open:"\u6253\u5f00",
+  profitIn:"%y \u5e74\u81f3\u4eca\u5229\u6da6",earnedLess:"\u6536\u5165 %e \u2212 \u6210\u672c %c",earnedOnly:"\u6536\u5165 %e",notReceived:"%v \u5c1a\u672a\u5230\u8d26",
+  outOnLoan:"\u5728\u5916\u672c\u91d1",perYear:"\u5e74\u5316 %v",collected:"\u5df2\u6536\u6bd4\u4f8b",ofEarned:"%a / %b",
+  ledgers:"\u8d26\u672c",ledgersSub:"\u653e\u8d37\u3001\u8d38\u6613\u3001\u79df\u8d41\u7684\u5e94\u6536\u4e0e\u5df2\u6536\u3002\u70b9\u8fdb\u53bb\u770b\u660e\u7ec6\u3002",
+  entry:"\u6761",entries:"\u6761",nothingYet:"\u6682\u65e0\u8bb0\u5f55",needChasing:"%n \u6761\u5f85\u50ac",setAside:"\u5df2\u6291\u7559 <b>%n</b> \u6761\u6301\u6709\u8d44\u4ea7\u4e0e\u6536\u652f\u8bb0\u5f55 \u2014 \u672c\u8d26\u53ea\u8ddf\u653e\u8d37\u3001\u8d38\u6613\u3001\u79df\u8d41\u3002\u5b83\u4eec\u4ecd\u5728\u4f60\u7684\u5907\u4efd\u6587\u4ef6\u91cc\u3002",
+  whoOwes:"\u8c01\u6b20\u4f60\u94b1",whoOwesSub:"\u4e24\u672c\u8d26\u5171 %n \u4eba \u00b7 %v",
+  statement:"\u6536\u652f\u8868",statementSub:"\u53ea\u7b97 %y \u5e74\u672c\u8eab\u4ea7\u751f\u7684\uff0c\u622a\u81f3\u4eca\u5929\u3002",
+  incomeEarned:"\u6536\u5165",costs:"\u6210\u672c",profit:"\u5229\u6da6",
+  asideUncollected:"\u5176\u4e2d <b class=\"warn\">%v \u8fd8\u6ca1\u5230\u4f60\u624b\u91cc</b> \u2014 \u6ede\u7559\u5728\u8d37\u6b3e\u4e0a\u7684\u5229\u606f\uff0c\u6216\u672a\u7ed3\u6e05\u7684\u79df\u91d1\u3002\u5df2\u8d5a\u5230\uff0c\u4f46\u4e0d\u662f\u73b0\u91d1\u3002",
+  asideConc:"<b class=\"warn\">\u5728\u5916\u8d44\u91d1\u7684 %p% \u96c6\u4e2d\u5728\u4e00\u4e2a\u4eba\u8eab\u4e0a</b>\uff08%n\uff09\u3002\u518d\u653e\u6b3e\u524d\u503c\u5f97\u6ce8\u610f\u3002",
+  wealth:"\u8d44\u91d1\u53bb\u5411",wealthSub:"%v \u5728\u5916\uff0c\u5c1a\u672a\u56de\u5230\u624b\u4e0a",
+  fGoodsCost:"\u8d27\u6b3e\u6210\u672c",fOtherCost:"\u5176\u4ed6\u8d39\u7528\uff08\u8fd0\u8f93\u3001\u4f63\u91d1\uff09",
+  totalIn:"\u6295\u5165\u5408\u8ba1",
+  health:"\u8fd9\u672c\u8d26\u7684\u72b6\u51b5",healthSub:"\u56db\u4e2a\u603b\u6570\u770b\u4e0d\u51fa\u6765\u7684\u6307\u6807\u3002",
+  ageTitle:"\u5728\u5916\u8d44\u91d1 \u00b7 \u6309\u903e\u671f\u7a0b\u5ea6",ageCurrent:"\u6b63\u5e38",age1:"\u903e\u671f 1 \u4e2a\u6708",age23:"\u903e\u671f 2\u20133 \u4e2a\u6708",age3:"\u903e\u671f 3 \u4e2a\u6708\u4ee5\u4e0a",
+  ageNote:"\u903e\u671f\u8d85\u8fc7\u4e09\u4e2a\u6708\u7684\u6b3e\uff0c\u5f88\u5c11\u80fd\u5168\u989d\u6536\u56de\u3002",
+  xirrTitle:"\u5b9e\u9645\u56de\u62a5\u7387",xirrSub:"\u8003\u8651\u6bcf\u7b14\u94b1\u4ec0\u4e48\u65f6\u5019\u51fa\u53bb\u3001\u4ec0\u4e48\u65f6\u5019\u56de\u6765",
+  xirrVsSimple:"\u7b80\u5355\u7b97\u6cd5\u4e3a %v",
+  realTitle:"\u6263\u6389\u6c47\u7387\u53d8\u52a8",realSub:"\u540d\u4e49 %n%\uff0c\u8ba1\u5165\u6c47\u7387\u540e\u662f %r%",
+  realNeed:"\u8f93\u5165\u6c47\u7387\u540e\u663e\u793a",realFlat:"\u8fd8\u6ca1\u6709\u6c47\u7387\u53d8\u52a8\u8bb0\u5f55",
+  beTitle:"\u5751\u8d26\u5bb9\u5fcd\u5ea6",beSub:"\u6309\u5e73\u5747 %r%/\u6708\uff0c\u4e00\u5e74\u574f\u8d26\u5230 %p% \u624d\u521a\u597d\u6253\u5e73",
+  lang:"EN",
+  more:"\u66f4\u591a",
+  earnedIn:"%y \u5e74\u6536\u5165",addA:"\u6dfb\u52a0%o",close:"\u5173\u95ed",search:"\u641c\u7d22%m",
+  nothingHere:"\u8fd8\u6ca1\u6709\u8bb0\u5f55",addFirst:"\u5728\u4e0a\u9762\u6dfb\u52a0\u7b2c\u4e00\u6761\u3002",noMatch:"\u627e\u4e0d\u5230",noMatchSub:"\u8fd9\u91cc\u6ca1\u6709\u53eb\u201c%q\u201d\u7684\u3002",
+  chase:"\u5f85\u50ac",due:"\u5230\u671f",clear:"\u5df2\u6e05",
+  lent:"\u653e\u6b3e",lentOn:"%d \u653e\u51fa %v",rate:"\u5229\u7387",ratePerMonth:"\u6708\u606f %r%",sameYearly:"\u6362\u7b97\u6210\u5e74\u5316",
+  yearlyCompound:"%r%\uff08\u590d\u5229\uff09",runningFor:"\u5df2\u8fc7",interestIn:"%y \u5e74\u5229\u606f",
+  interestSince:"\u5f00\u59cb\u81f3\u4eca\u5229\u606f",intReceived:"%y \u5e74\u5df2\u6536\u5229\u606f",inclEarlier:"\uff08\u542b\u5f80\u5e74\u7684 %v\uff09",
+  capitalBack:"%y \u5e74\u6536\u56de\u672c\u91d1",notIncome:"%v \u2014 \u4e0d\u7b97\u6536\u5165",owedNow:"\u5f53\u524d\u5e94\u6536",settledLbl:"\u5df2\u7ed3\u6e05",
+  note:"\u5907\u6ce8",principalOut:"\u5728\u5916\u672c\u91d1",cleanMonth:"\u6b63\u5e38\u4e00\u4e2a\u6708",
+  rolledIn:"\u6eda\u5165\u672c\u91d1\u7684\u5229\u606f",nextMonth:"\u4e0b\u6708\u5e94\u6536",nextOn:"%d \u6536 %v",
+  eachMonth:"\u6bcf\u6708 \u00b7 \u70b9\u51fb\u6807\u8bb0\u5df2\u6536",firstNotDue:"\u7b2c\u4e00\u671f\u8fd8\u6ca1\u5230\u671f\u3002",
+  showingLast:"\u663e\u793a\u6700\u8fd1 12 \u671f\uff0c\u5171 %n \u671f\u3002",movements:"\u8fd8\u6b3e\u4e0e\u8ffd\u52a0\u653e\u6b3e",noMovements:"\u6682\u65e0 \u2014 \u4f59\u989d\u8fd8\u662f\u539f\u6765\u7684\u91d1\u989d\u3002",
+  paid:"\u8fd8\u6b3e",whatHappened:"\u53d1\u751f\u4ec0\u4e48",theyPaid:"\u4ed6\u8fd8\u6b3e",iLentMore:"\u6211\u518d\u653e\u6b3e",
+  amount:"\u91d1\u989d",date:"\u65e5\u671f",recordIt:"\u8bb0\u4e0b",
+  rentMonthly:"\u79df\u91d1",rentPerMonth:"\u6bcf\u6708 %v",term:"\u79df\u671f",ongoing:"\u6301\u7eed\u4e2d",
+  monthsInside:"%y \u5e74\u5185\u6708\u6570",rentFor:"%y \u5e74\u79df\u91d1",collectedSoFar:"\u5df2\u6536",stillToCollect:"\u5f85\u6536",
+  landWorth:"\u5730\u4ef7",rentReceived:"\u6536\u79df\u8bb0\u5f55",noRentYet:"\u8fd9\u5757\u5730\u8fd8\u6ca1\u6536\u8fc7\u79df\u3002",
+  soldFor:"\u5356\u4ef7",profitLbl:"\u5229\u6da6",margin:"\u6bdb\u5229\u7387",countedIn:"\u8ba1\u5165",
+  earIs:"\u6298\u5408\u5e74\u7387 %v",
+  avgBalLbl:"\u8ba1\u606f\u57fa\u6570",avgBalNote:"\u6309\u5929\u52a0\u6743\u5e73\u5747\u4f59\u989d",
+  heldLbl:"\u6301\u6709\u65f6\u957f",monthsUnit:"%m \u4e2a\u6708",
+  fBoughtOn:"\u4e70\u5165\u65e5\u671f",fSoldOnOpt:"\u5356\u51fa\u65e5\u671f\uff08\u4ecd\u5728\u624b\u5219\u7559\u7a7a\uff09",
+  boughtLbl:"\u4e70\u5165",heldMo:"\u6301\u6709 %m \u4e2a\u6708",heldSoFar:"\u5df2\u6301\u6709 %m \u4e2a\u6708",
+  tiedUpLbl:"\u5360\u7528\u8d44\u91d1",perMonthHeld:"\u6301\u4ed3\u6708\u5747",
+  roundOpen:"\u5c1a\u672a\u5356\u51fa",closeRound:"\u767b\u8bb0\u5356\u51fa",roundNote:"\u6ca1\u5356\u51fa\u4e4b\u524d\u4e0d\u8ba1\u5229\u6da6\uff0c\u6210\u672c\u53ea\u7b97\u4f5c\u88ab\u5360\u7528\u7684\u8d44\u91d1\u3002",
+  eBuyDate:"\u8bf7\u586b\u5199\u6709\u6548\u7684\u4e70\u5165\u65e5\u671f\u3002",
+  eSellAfter:"\u5356\u51fa\u65e5\u671f\u4e0d\u80fd\u65e9\u4e8e\u4e70\u5165\u65e5\u671f\u3002",
+  eSoldFor:"\u8bf7\u586b\u5199\u5356\u4ef7\uff0c\u6216\u6e05\u7a7a\u5356\u51fa\u65e5\u671f\u4ee5\u4fdd\u6301\u6301\u6709\u3002",
+  eCostPos:"\u8bf7\u586b\u5199\u8d27\u7269\u7684\u6210\u672c\u3002",
+  soldForLbl:"\u5356\u4ef7",soldOn:"\u5356\u51fa\u65e5\u671f",editDetails:"\u7f16\u8f91",markSettled:"\u6807\u8bb0\u7ed3\u6e05",reopen:"\u91cd\u65b0\u6253\u5f00",del:"\u5220\u9664",save:"\u4fdd\u5b58\u4fee\u6539",add:"\u6dfb\u52a0",
+  undoDeleted:"\u5df2\u5220\u9664 %n",undo:"\u64a4\u9500",undoRemovedPay:"\u5df2\u5220\u9664\u8fd8\u6b3e %v",undoRemovedLend:"\u5df2\u5220\u9664\u653e\u6b3e %v",
+  undoRemovedRent:"\u5df2\u5220\u9664\u6536\u79df %v",undoSold:"%n \u5df2\u6309 %v \u5356\u51fa",
+  fBorrower:"\u501f\u6b3e\u4eba",fAmountLent:"\u653e\u6b3e\u91d1\u989d",fPrincipal:"\u672c\u91d1",fRateMo:"\u6708\u5229\u7387 %",
+  fLentOn:"\u653e\u6b3e\u65e5\u671f",fNote:"\u5907\u6ce8\u6216\u62b5\u62bc",fName:"\u540d\u79f0",fRent:"\u6bcf\u6708\u79df\u91d1",fStarts:"\u8d77\u79df\u65e5",
+  fEnds:"\u5230\u671f\u65e5\uff08\u7559\u7a7a\uff1d\u6301\u7eed\uff09",fWhatItWas:"\u8d27\u7269\u540d\u79f0",
+  fTotalSold:"\u603b\u5356\u4ef7",eName:"\u586b\u4e2a\u540d\u5b57\uff0c\u4ee5\u540e\u597d\u8ba4\u3002",eHowMuch:"\u586b\u653e\u6b3e\u91d1\u989d\u3002",
+  eRate:"\u6708\u5229\u7387\u8bf7\u586b 0 \u5230 100 \u4e4b\u95f4\u3002",eDateValid:"\u586b\u4e00\u4e2a\u6709\u6548\u7684\u653e\u6b3e\u65e5\u671f\u3002",
+  eFuture:"\u65e5\u671f\u5728\u672a\u6765\u3002",eRent:"\u586b\u6bcf\u6708\u79df\u91d1\u3002",eStart:"\u586b\u4e00\u4e2a\u6709\u6548\u7684\u8d77\u79df\u65e5\u3002",
+  eEndDate:"\u5230\u671f\u65e5\u4e0d\u662f\u771f\u5b9e\u65e5\u671f\u3002",eEndAfter:"\u5230\u671f\u65e5\u8981\u5728\u8d77\u79df\u65e5\u4e4b\u540e\u3002",
+  eSaleDate:"\u586b\u4e00\u4e2a\u6709\u6548\u7684\u5356\u51fa\u65e5\u671f\u3002",
+  eAmount:"\u586b\u91d1\u989d\u3002",eDate:"\u586b\u4e00\u4e2a\u6709\u6548\u65e5\u671f\u3002",
+  eNotNumber:"\u201c%f\u201d\u4e0d\u662f\u6570\u5b57\u3002\u53ea\u586b\u6570\u5b57\uff0c\u4e0d\u8981\u9017\u53f7\u3002",
+  eAmtNotNumber:"\u91d1\u989d\u4e0d\u662f\u6570\u5b57\u3002\u53ea\u586b\u6570\u5b57\uff0c\u4e0d\u8981\u9017\u53f7\u3002",
+  eBeforeLent:"\u8fd9\u5728\u653e\u6b3e\u65e5\u671f\u4e4b\u524d\u3002",
+  eMoreThanOwed:"\u8d85\u8fc7\u4ed6\u4eec\u603b\u5171\u6b20\u7684 %v\u3002",
+  eOverRent:"\u603b\u6570\u4f1a\u53d8\u6210 %a\uff0c\u8d85\u8fc7\u8fd9\u5757\u5730\u6302\u8d5a\u7684 %b\u3002",
+  eSoldFor:"\u586b\u5356\u4ef7\u3002",
+  currency:"\u8d27\u5e01",privacy:"\u9690\u85cf",hideFigures:"\u9690\u85cf\u91d1\u989d",showFigures:"\u663e\u793a\u91d1\u989d",
+  yourData:"\u6570\u636e",backUp:"\u5907\u4efd\u5230\u6587\u4ef6",restoreFile:"\u4ece\u6587\u4ef6\u6062\u590d",restorePaste:"\u7c98\u8d34\u6587\u672c\u6062\u590d",
+  forAccountant:"\u7ed9\u4f1a\u8ba1",exportSheet:"\u5bfc\u51fa %y \u5e74\u8868\u683c",
+  restoreNote:"\u53ef\u4ee5\u6062\u590d IWP \u5907\u4efd\uff0c\u4e5f\u53ef\u4ee5\u5bfc\u5165\u501f\u51fa\u8d26\u672c\u5907\u4efd\u3002",
+  fxTitle:"\u6c47\u7387",fxSub:"\u586b\u4f60\u5b9e\u9645\u6362\u5230\u7684\u6c47\u7387\u3002\u7cfb\u7edf\u4e0d\u66ff\u4f60\u731c\u3002",
+  fxLabel:"1 %c \u6362 %m",fxAgainst:"\u5bf9\u6807\u8d27\u5e01",fxSave:"\u4fdd\u5b58\u6c47\u7387",
+  fxFirst:"\u7b2c\u4e00\u6761\u6c47\u7387\u5df2\u4fdd\u5b58\u3002\u4e0b\u6b21\u518d\u586b\uff0c\u7cfb\u7edf\u4f1a\u7b97\u51fa\u53d8\u52a8\u3002",
+  fxChange:"\u6bd4 %d \u8d2c\u503c %p%",weaker:"\u8d2c\u503c",stronger:"\u5347\u503c",fxHistory:"\u5df2\u4fdd\u5b58\u7684\u6c47\u7387",
+  fxNone:"\u8fd8\u6ca1\u4fdd\u5b58\u8fc7\u6c47\u7387\u3002",fxConfirm:"\u786e\u8ba4\u4eca\u5929\u7684\u6c47\u7387\u662f %v\uff1f",fxYes:"\u786e\u8ba4\u4fdd\u5b58",fxNo:"\u53d6\u6d88",
+  copyClip:"\u590d\u5236",copied:"\u5df2\u590d\u5236",selectCopy:"\u5168\u9009\u540e\u590d\u5236",done:"\u5b8c\u6210",
+  loadIt:"\u8f7d\u5165",cancel:"\u53d6\u6d88",pasteHere:"\u628a IWP \u6216\u501f\u51fa\u8d26\u672c\u7684\u5907\u4efd\u7c98\u8d34\u5230\u8fd9\u91cc\u3002",
+  pasteJSON:"\u7c98\u8d34 JSON",notJSON:"\u8fd9\u4e0d\u662f\u6709\u6548\u7684 JSON\u3002",
+  savedAs:"\u5df2\u4fdd\u5b58\u4e3a <b>%n</b>\u3002",noFileHint:"\u5982\u679c\u6ca1\u6709\u51fa\u73b0\u6587\u4ef6\uff0c\u590d\u5236\u4e0b\u9762\u7684\u6587\u5b57\uff0c\u5b58\u6210\u540d\u4e3a <b>%n</b> \u7684\u6587\u4ef6\u3002",
+  storedHere:"\u53ea\u5b58\u5728\u8fd9\u4e2a\u6d4f\u89c8\u5668\u91cc",neverBacked:"<b>\u4ece\u672a\u5907\u4efd</b>",lastBackup:"\u4e0a\u6b21\u5907\u4efd %d",
+  recompute:"\u6bcf\u6b21\u6253\u5f00\u90fd\u6309\u65e5\u671f\u91cd\u7b97\u3002",
+  restored:"<b>\u5df2\u6062\u590d %n \u6761</b>\uff08IWP \u5907\u4efd\uff09\u3002",
+  imported:"<b>\u5df2\u5bfc\u5165 %n \u6761</b>\uff08\u501f\u51fa\u8d26\u672c\uff09",skippedDup:" \u00b7 \u8df3\u8fc7\u5df2\u6709\u7684 %n \u6761",
+  nothingNew:"\u6ca1\u6709\u65b0\u7684 \u2014 \u6587\u4ef6\u91cc\u7684 %n \u6761\u90fd\u5df2\u7ecf\u5728\u4e86\u3002",
+  noLoans:"\u6587\u4ef6\u91cc\u6ca1\u627e\u5230\u8d37\u6b3e\u6216\u79df\u7ea6\u3002",badFile:"\u6587\u4ef6\u4e0d\u662f\u6709\u6548\u7684 JSON\u3002",
+  unreadable:"\u6587\u4ef6\u8bfb\u4e0d\u4e86\u3002"
+ }
+};
+function t(k,vars){
+  var str=(L[S.lang]&&L[S.lang][k])||L.en[k]||k;
+  if(vars)Object.keys(vars).forEach(function(v){str=str.split("%"+v).join(vars[v]);});
+  return str;
+}
+
+var MODS={
+  ltloan:{color:"#B07E28",
+    en:{label:"Long-term loans",one:"loan",how:"Interest compounds every month on whatever is still outstanding, worked to the exact day, and rides on the balance until they settle. A lump sum shrinks the balance from its own date; lending more grows it."},
+    zh:{label:"\u957f\u671f\u501f\u6b3e",one:"\u8d37\u6b3e",how:"\u6309\u7cbe\u786e\u65e5\u671f\u6708\u590d\u5229\uff0c\u5229\u606f\u6ede\u7559\u5728\u4f59\u989d\u4e0a\u76f4\u5230\u7ed3\u6e05\u3002\u8fd8\u4e00\u7b14\u5c31\u4ece\u90a3\u5929\u8d77\u51cf\u4f59\u989d\uff0c\u518d\u653e\u6b3e\u5c31\u589e\u4f59\u989d\u3002"}},
+  stloan:{color:"#3F8A6A",
+    en:{label:"Short-term loans",one:"borrower",how:"Interest falls due on the same day each month, charged on the day-weighted average balance. Collect it and the principal stays flat. Miss a month and that interest rolls into the base and starts earning too."},
+    zh:{label:"\u77ed\u671f\u501f\u6b3e",one:"\u501f\u6b3e\u4eba",how:"\u6bcf\u6708\u540c\u4e00\u5929\u7ed3\u606f\uff0c\u6309\u5f53\u6708\u6309\u5929\u52a0\u6743\u7684\u5e73\u5747\u4f59\u989d\u8ba1\u606f\u3002\u6536\u4e86\u672c\u91d1\u4e0d\u53d8\uff1b\u6ca1\u6536\u5c31\u6eda\u5165\u672c\u91d1\u7ee7\u7eed\u751f\u606f\u3002"}},
+  lease:{color:"#7489AD",
+    en:{label:"Land and leases",one:"lease",how:"Rent accrues across the term. Only months falling inside the selected year count, and the last day of a term is a day it was rented."},
+    zh:{label:"\u571f\u5730\u4e0e\u79df\u7ea6",one:"\u79df\u7ea6",how:"\u79df\u91d1\u6309\u79df\u671f\u7d2f\u8ba1\uff0c\u53ea\u7b97\u843d\u5728\u6240\u9009\u5e74\u4efd\u5185\u7684\u6708\u4efd\uff0c\u5230\u671f\u5f53\u5929\u4e5f\u7b97\u79df\u7528\u65e5\u3002"}},
+  cycle:{color:"#B5523E",
+    en:{label:"Trade rounds",one:"round",how:"A round runs from the day you buy to the day you sell \u2014 weeks or months apart. While you hold it the cost shows as money tied up and earns nothing. Profit counts in the year you sold, and is also shown per month held so you can weigh it against a loan rate."},
+    zh:{label:"\u8d38\u6613",one:"\u8d38\u6613",how:"\u4e00\u8f6e\u4ece\u4e70\u5165\u90a3\u5929\u7b97\u5230\u5356\u51fa\u90a3\u5929\uff0c\u53ef\u8de8\u6570\u5468\u751a\u81f3\u6570\u6708\u3002\u6301\u6709\u671f\u95f4\u6210\u672c\u8ba1\u4f5c\u5360\u7528\u8d44\u91d1\uff0c\u4e0d\u751f\u6536\u5165\u3002\u5229\u6da6\u7b97\u5728\u5356\u51fa\u7684\u90a3\u4e00\u5e74\uff0c\u5e76\u6309\u6301\u4ed3\u6708\u6570\u6298\u7b97\uff0c\u65b9\u4fbf\u4e0e\u653e\u8d37\u5229\u7387\u76f8\u6bd4\u3002"}},
+};
+function M(key){var m=MODS[key];return m[S.lang]||m.en;}
+/* ---------- plain-language notes behind every (i) ----------
+   Each entry: title, what it means, and a worked example using this book's
+   own shapes. One is open at a time; the key lives in infoOpen. */
+var INFO={
+profit:{en:{t:"Profit so far this year",
+  b:"Everything the book earned this year, less what it cost you. Interest counts in the year it was earned — not the year it was paid — so a borrower who pays nothing still shows up here.",
+  eg:"Earned 9,000,000 and spent 1,200,000 → profit 7,800,000. Land you own going up in value is <b>not</b> in here; that only becomes profit when you sell."},
+ zh:{t:"今年至今的利润",
+  b:"今年账本所有收入减掉成本。利息算在它生成的那一年，不是收到钱的那一年，所以就算借款人一分未付，也计在这里。",
+  eg:"收入 9,000,000，成本 1,200,000 → 利润 7,800,000。手上土地涨价<b>不算</b>在内，卖出才算利润。"}},
+outloan:{en:{t:"Out on loan",
+  b:"Money that is in other people's hands right now — principal still unpaid, plus interest that has piled up and not been collected. It is not cash and not profit; it is what you are waiting on.",
+  eg:"Lent 20,000,000 at 2% a month eight months ago, nothing repaid → out on loan is about 23,400,000, because the unpaid interest is now part of the balance."},
+ zh:{t:"在外本息",
+  b:"此刻还在别人手上的钱：未还本金，加上已经累起但未收的利息。它不是现金，也不是利润，是你在等的钱。",
+  eg:"八个月前按月息 2% 放款 20,000,000，分文未还 → 在外约 23,400,000，因为未收利息已成为余额的一部分。"}},
+collected:{en:{t:"Collected",
+  b:"Of everything you earned this year, the share that has actually reached your hand. The rest is real income, but it is still on paper.",
+  eg:"Earned 10,000,000, received 9,100,000 → 91%. A low number means the book looks profitable while the cash has not arrived."},
+ zh:{t:"已收比例",
+  b:"今年所有收入中，真正到手的部分。剩下的仍是真实收入，但还停在纸面上。",
+  eg:"收入 10,000,000，到手 9,100,000 → 91%。比例偏低，说明账面赚钱而现金未到。"}},
+yieldr:{en:{t:"Yield on money out",
+  b:"What the money in other people's hands is earning you, stated as a yearly rate. It takes this year's interest, scales it to a full year, and divides by the amount out.",
+  eg:"Three months in, 1,500,000 earned on 25,000,000 out → 1,500,000 × 4 ÷ 25,000,000 = 24% a year."},
+ zh:{t:"在外本金的年化收益",
+  b:"别人手上的钱为你赚多少，换算成年率。把今年已生利息按全年折算，再除以在外金额。",
+  eg:"过了三个月，25,000,000 在外生息 1,500,000 → 1,500,000 × 4 ÷ 25,000,000 = 年率 24%。"}},
+aging:{en:{t:"Money out, by how late it is",
+  b:"Your money out, split by how many monthly interest payments are behind. Two books with the same total can be in very different shape — this is the one that tells you which.",
+  eg:"A borrower who has missed three months sits in the dark band. Money in that band is where losses usually start, long before anyone admits it."},
+ zh:{t:"在外本金的逾期分布",
+  b:"按欠付月数把在外本金分档。两本账总额相同，健康度可能完全不同，这一条就是用来分辨的。",
+  eg:"欠了三个月的借款人落在最深的那一条。损失通常就从这一条开始，远在任何人承认之前。"}},
+xirr:{en:{t:"True return",
+  b:"Your real rate of return once the <b>timing</b> of every movement is counted. Money lent early, repaid late, or lent again halfway through all pull this number around, which a simple average cannot see.",
+  eg:"Two loans both at 2% a month: one repaid on time, one dragging unpaid. The dragging one still accrues on paper, so the simple rate looks the same — the true return drops."},
+ zh:{t:"真实回报率",
+  b:"把每笔资金进出的<b>时间</b>都算进去之后的真实回报。早放、晚收、中途追加，都会拉动这个数字，而简单平均看不到。",
+  eg:"两笔都是月息 2%：一笔按时还，一笔久拖未付。拖的那笔纸面上照样生息，所以简单利率不变，真实回报却下降。"}},
+real:{en:{t:"After the kyat moves",
+  b:"Your return measured in buying power, not in kyats. If the kyat loses ground against the rate you saved, part of your interest only covers that slide.",
+  eg:"29% earned while the kyat weakened 24% → (1.29 ÷ 1.24) − 1 = about 4% in real terms. Nothing is assumed here; it uses only rates you typed and saved."},
+ zh:{t:"扣除汇率变动后",
+  b:"用购买力衡量的回报，而不是缅元金额。如果缅元相对你保存的汇率贬值，那么部分利息只是补了这个缺口。",
+  eg:"赚 29%，同期缅元贬 24% →（1.29 ÷ 1.24）− 1 ≈ 实际 4%。汇率不做任何假设，全部来自你自己输入并保存的数字。"}},
+bedr:{en:{t:"Room for bad debts",
+  b:"How much of your book could go bad before your rate stops covering the loss. At a high rate the good loans carry the dead ones; this is where that stops working.",
+  eg:"At 2.19% a month the yearly rate is about 29.7%, so 29.7 ÷ 129.7 = 23%. Lose more than roughly a quarter of the book and the rate is no longer paying for it."},
+ zh:{t:"坏账容错空间",
+  b:"在利率还能覆盖损失之前，账本最多能坏多少。利率高时，好账能养死账；这个数字就是养不住的那条线。",
+  eg:"月息 2.19% → 年率约 29.7%，29.7 ÷ 129.7 = 23%。坏账超过大约四分之一，利率就贴不住了。"}},
+conc:{en:{t:"Concentration",
+  b:"The share of all money out that sits with your single biggest borrower. A high share is not wrong, but it means one person's trouble is your trouble.",
+  eg:"43% with one borrower: if they stop paying, nearly half the book stops at once, whatever the other names do."},
+ zh:{t:"集中度",
+  b:"最大一位借款人占全部在外本金的比例。比例高并不是错，但这意味着他一人出事就是你出事。",
+  eg:"一人占 43%：他一旦停付，几乎一半账本立即停住，其他人怎么做都不重要。"}},
+ear:{en:{t:"Same as a yearly rate",
+  b:"A monthly rate that compounds is worth far more over a year than twelve times itself, because each month's interest starts earning too.",
+  eg:"2% a month is not 24% a year — it is 1.02<sup>12</sup> − 1 = 26.8%. 3% a month is 42.6%."},
+ zh:{t:"折合年率",
+  b:"月复利在一年里远高于月率的十二倍，因为每个月的利息自己也开始生息。",
+  eg:"月息 2% 不是年 24%，而是 1.02<sup>12</sup> − 1 = 26.8%。月息 3% 则是 42.6%。"}},
+dwab:{en:{t:"Day-weighted average balance",
+  b:"When a borrower pays back or takes more in the middle of a month, interest is charged on what was actually outstanding each day — not on the balance at the start or the end.",
+  eg:"10,000,000 for the first 10 days, then 6,000,000 for the next 20 → interest is charged on 7,333,333, not on either figure alone."},
+ zh:{t:"按天加权平均余额",
+  b:"借款人在月中还款或追借时，利息按每一天实际未还的金额计算，不是按月初或月末的余额。",
+  eg:"前 10 天 10,000,000，后 20 天 6,000,000 → 按 7,333,333 计息，而不是单取其中任何一个数。"}},
+rolled:{en:{t:"Unpaid interest rolled in",
+  b:"A month of interest they did not pay stops being a bill and becomes part of the principal. From then on it earns interest itself.",
+  eg:"400,000 of interest left unpaid on 20,000,000 → next month is charged on 20,400,000. Two missed months compound, which is why arrears grow faster than they look."},
+ zh:{t:"未付利息已滚入本金",
+  b:"没收到的那一个月利息不再是一笔应收，而是变成本金的一部分，从此自己也开始生息。",
+  eg:"20,000,000 上有 400,000 利息未付 → 下月按 20,400,000 计息。连欠两月就开始复利，所以欠款涨得比看上去快。"}},
+capital:{en:{t:"Capital returned, not income",
+  b:"When they hand back principal, you are getting your own money back. It is not earnings, so it never counts towards profit — only the interest does.",
+  eg:"They pay 5,000,000: if 800,000 of it clears interest owed, only that 800,000 is income. The other 4,200,000 just shrinks the balance."},
+ zh:{t:"还本不是收入",
+  b:"他们还本金时，你收回的是自己的钱，不是收入，所以永远不计入利润——只有利息算。",
+  eg:"他还 5,000,000：其中 800,000 冲欠息，那只有这 800,000 是收入，剩下 4,200,000 只是减余额。"}},
+margin:{en:{t:"Margin",
+  b:"The profit on a trade round as a share of what you spent on it. It says how much cushion the round had, which a plain profit figure hides.",
+  eg:"Spent 28,000,000, sold for 35,500,000 → 7,500,000 profit, a 26.8% margin. A thin margin means a small price move could have wiped it out."},
+ zh:{t:"毛利率",
+  b:"一轮贸易的利润占成本的比例。它说明这一轮有多少缓冲，而单看利润金额看不出来。",
+  eg:"成本 28,000,000，卖 35,500,000 → 利润 7,500,000，毛利率 26.8%。毛利薄，意味着价格稍动就可能全没。"}},
+permo:{en:{t:"Per month held",
+  b:"A trade round's profit spread over the months your money sat in it. This is the number to compare against a loan rate, because a round that pays 20% in two months beats one that pays 25% in a year.",
+  eg:"26.8% earned over 4.2 months → about 6.0% a month. Against lending at 2% a month, the corn did better — but only while it was moving."},
+ zh:{t:"持仓月均回报",
+  b:"一轮贸易的利润按占用资金的月数摊平。这个数字才能和放贷利率相比：两个月赚 20%，超过一年赚 25%。",
+  eg:"4.2 个月赚 26.8% → 约月均 6.0%。比月息 2% 的放贷好，但仅限于货在走的时候。"}},
+tied:{en:{t:"Money tied up",
+  b:"A round you have bought but not yet sold. The cash has left your hand and the profit is not known yet, so it earns nothing here — it shows as money tied up until the sale.",
+  eg:"28,000,000 of corn bought in March, still in the store in July → four months with that money unavailable and no income from it. That waiting is a real cost even when the sale eventually goes well."},
+ zh:{t:"占用资金",
+  b:"已买入、尚未卖出的一轮。钱已经出去，利润还不知道，所以这里不计收入，只算作被占用的资金，直到卖出。",
+  eg:"三月买入 28,000,000 的玉米，到七月还在仓里 → 这笔钱被占四个月且毫无收入。即使最后卖得好，这段等待也是真实成本。"}},
+accrual:{en:{t:"Earned against received",
+  b:"Earned is what the book is owed for time that has already passed. Received is what has actually come in. The gap is the part you are still waiting for.",
+  eg:"A loan running eight months has earned eight months of interest even if they paid in month two and nothing since. Earned tells you the business; received tells you the cash."},
+ zh:{t:"应收与已收",
+  b:"应收是已经过去的时间按约应得的钱，已收是真正进账的钱，差额就是你还在等的部分。",
+  eg:"一笔走了八个月的贷款，就算他只在第二个月付过一次，应收仍是八个月的利息。应收看生意，已收看现金。"}},
+cleanmo:{en:{t:"A clean month costs them",
+  b:"What this borrower owes for one month if nothing changes — the baseline to check a payment against before you accept it.",
+  eg:"20,000,000 at 3% → 600,000 a month. They hand you 400,000: that is not a clean month, and the 200,000 short will roll into the principal."},
+ zh:{t:"正常一个月的利息",
+  b:"如果一切不变，这位借款人一个月该付多少——收钱前用来比对的基准。",
+  eg:"20,000,000 按 3% → 月付 600,000。他给你 400,000，那不是完整的一个月，差的 200,000 会滚入本金。"}}
+};
+var infoOpen="";
+function iof(k){var e=INFO[k];return e?(e[S.lang]||e.en):null;}
+/* the button, and the note that opens under whatever block holds it */
+function ib(k){return '<button class="i" type="button" data-i="'+k+'" aria-expanded="'+
+  (infoOpen===k?"true":"false")+'" aria-label="'+esc(iof(k)?iof(k).t:k)+'">i</button>';}
+function inote(){var k=infoOpen,e=iof(k);if(!e)return"";
+  return '<div class="inote" role="note"><b>'+esc(e.t)+'</b> — '+e.b+
+    (e.eg?'<span class="eg">'+e.eg+'</span>':'')+'</div>';}
+function inoteFor(keys){return keys.indexOf(infoOpen)>=0?inote():"";}
+
+/* loans, trading and leases only: this book follows cash earned and cash
+   collected, not what anything is worth */
+var ORDER=["ltloan","stloan","lease","cycle"];
+function modOf(it){return it.type;}
+function known(it){return !!(it&&it.type&&MODS[it.type]);}
+
+/* ---------- dates ---------- */
+function P(s){var a=String(s).split("-");return new Date(+a[0],+a[1]-1,+a[2]);}
+function isoOf(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function addMonths(d,n){var day=d.getDate(),x=new Date(d.getTime());x.setDate(1);
+  x.setFullYear(d.getFullYear(),d.getMonth()+n,1);
+  var last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(day,last));return x;}
+function wholeM(a,b){if(!(b>a))return 0;var lo=0,hi=1;
+  while(addMonths(a,hi)<=b){lo=hi;hi*=2;if(hi>1e5)break;}
+  while(hi-lo>1){var m=Math.floor((lo+hi)/2);if(addMonths(a,m)<=b)lo=m;else hi=m;}return lo;}
+function months(a,b){if(!(b>a))return 0;var w=wholeM(a,b),x=addMonths(a,w),y=addMonths(a,w+1);return w+(b-x)/(y-x);}
+function yearEdges(Y){return[new Date(Y,0,1),new Date(Math.min(new Date(Y+1,0,1).getTime(),NOW.getTime()))];}
+function sliceInYear(startISO,endISO,Y){
+  var e0=yearEdges(Y),ys=e0[0],cap=e0[1];
+  var s=new Date(Math.max(P(startISO).getTime(),ys.getTime()));
+  var incl=endISO?new Date(P(endISO).getFullYear(),P(endISO).getMonth(),P(endISO).getDate()+1):null;
+  var e=incl?new Date(Math.min(incl.getTime(),cap.getTime())):cap;
+  return e>s?months(s,e):0;
+}
+function inYear(iso,Y){if(!iso)return false;var d=P(iso);return d.getFullYear()===Y&&d<=NOW;}
+function dur(a,b){var w=wholeM(a,b),an=addMonths(a,w),d=Math.floor((b-an)/86400000),y=Math.floor(w/12),m=w%12;
+  return (y?y+"y ":"")+((m||y)?m+"mo ":"")+d+"d";}
+function daysBetween(a,b){return Math.round((b-a)/86400000);}
+/* 2026-13-45 passes a regex but JS rolls it into 2027; round-trip to catch that */
+function validDate(s){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+  var d=P(s);
+  if(isNaN(d.getTime())||isoOf(d)!==s)return false;
+  return d.getFullYear()>=1900&&d.getFullYear()<=2200;
+}
+
+/* ---------- money ---------- */
+function fmt(n){
+  /* whole amounts read as whole amounts: $0, not $0.00 */
+  var a=Math.abs(n),d=(a>=1000||Math.round(n)===n)?0:2;
+  return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});}
+/* the kyat takes the bare $ because it is the home currency of this book;
+   every other currency carries its code, so no figure can be read as the
+   wrong money */
+var SYM={MMK:"$",USD:"USD ",THB:"THB ",CAD:"CAD ",SGD:"SGD "};
+function money(n){return (SYM[S.cur]||(S.cur+" "))+fmt(n);}
+/* Myanmar counts in lakh (သိန်း = 100,000) — how the number actually gets said */
+function lakh(n){if(S.cur!=="MMK"||Math.abs(n)<100000)return "";
+  return (n/100000).toLocaleString("en-US",{maximumFractionDigits:1})+" သိန်း";}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function sgn(m){return m.kind==="repay"?-Math.abs(+m.amt||0):Math.abs(+m.amt||0);}
+/* people type 1,500,000 and 1 500 000; parseFloat would quietly return 1 */
+function num(v){
+  if(typeof v==="number")return isFinite(v)?v:NaN;
+  var t=String(v==null?"":v).replace(/[\s,\u00a0\u066c']/g,"");
+  if(t==="")return 0;
+  if(!/^-?\d*\.?\d+$/.test(t))return NaN;
+  var n=parseFloat(t);return isFinite(n)?n:NaN;
+}
+/* 2%/month compounding is 26.8% a year, not 24% — worth stating plainly */
+function ear(ratePct){return (Math.pow(1+(+ratePct||0)/100,12)-1)*100;}
+
+/* ---------- long-term ---------- */
+function ltWalk(it,Y){
+  var r=(+it.rate||0)/100,start=P(it.start),ed=yearEdges(Y),yA=ed[0],yB=ed[1];
+  var stop=it.settled&&it.settledOn?P(it.settledOn):NOW;
+  var horizon=new Date(Math.min(stop.getTime(),NOW.getTime()));
+  var mv=(it.moves||[]).map(function(m){return{t:P(m.date).getTime(),v:sgn(m)};})
+    .filter(function(x){return x.t>=start.getTime()&&x.t<=horizon.getTime();})
+    .sort(function(a,b){return a.t-b.t;});
+  var pts=mv.map(function(x){return x.t;});
+  pts.push(yA.getTime(),yB.getTime(),horizon.getTime());
+  pts=pts.filter(function(t){return t>start.getTime()&&t<=horizon.getTime();})
+         .sort(function(a,b){return a-b;}).filter(function(t,i,a){return i===0||t!==a[i-1];});
+  /* principal and unpaid interest are tracked apart so a repayment can be split:
+     it clears accrued interest first, and only the remainder is principal back.
+     Without this, returning capital was being counted as income received. */
+  var prin=+it.amount||0,accr=0,cursor=start,interest=0,intGot=0,prinBack=0,lent=0,lifetime=0;
+  mv.forEach(function(x){if(x.t===start.getTime()){if(x.v>0)prin+=x.v;else prin=Math.max(0,prin+x.v);}});
+  pts.forEach(function(t){
+    var pp=new Date(t),bal=prin+accr;
+    var grown=bal*Math.pow(1+r,months(cursor,pp)),step=grown-bal;
+    lifetime+=step;accr+=step;
+    if(cursor.getTime()>=yA.getTime()&&t<=yB.getTime())interest+=step;
+    mv.forEach(function(x){
+      if(x.t!==t)return;
+      var inY=(t>=yA.getTime()&&t<=yB.getTime());
+      if(x.v>0){prin+=x.v;if(inY)lent+=x.v;}
+      else{
+        var pay=-x.v,toInt=Math.min(accr,pay);
+        accr-=toInt;pay-=toInt;
+        var toPrin=Math.min(prin,pay);prin-=toPrin;
+        if(inY){intGot+=toInt;prinBack+=toPrin;}
+      }
+    });
+    cursor=pp;
+  });
+  if(it.settled){prin=0;accr=0;}
+  return{earned:interest,collected:intGot,principalBack:prinBack,lent:lent,
+         held:prin+accr,principal:prin,accrued:accr,lifetime:lifetime};
+}
+/* ---------- short-term ---------- */
+function stBalanceAt(it,d){
+  var b=(P(it.start)<=d)?(+it.amount||0):0;
+  (it.moves||[]).forEach(function(m){if(P(m.date)<=d)b+=sgn(m);});
+  return Math.max(0,b);
+}
+function stWeighted(it,from,to){
+  var span=to-from; if(span<=0)return stBalanceAt(it,to);
+  var pts=(it.moves||[]).map(function(m){return{d:P(m.date),v:sgn(m)};})
+    .filter(function(x){return x.d>from&&x.d<=to;}).sort(function(a,b){return a.d-b.d;});
+  var acc=0,cursor=from,bal=stBalanceAt(it,from);
+  pts.forEach(function(x){acc+=bal*(x.d-cursor);bal=Math.max(0,bal+x.v);cursor=x.d;});
+  acc+=bal*(to-cursor);
+  return acc/span;
+}
+function stWalk(it,Y){
+  var r=(+it.rate||0)/100,start=P(it.start),ed=yearEdges(Y),yA=ed[0],yB=ed[1];
+  var stop=it.settled&&it.settledOn?P(it.settledOn):NOW;
+  var horizon=new Date(Math.min(stop.getTime(),NOW.getTime()));
+  var pm=it.paid||{},rolled=0,earned=0,collected=0,prev=start,n=1,due,rows=[],unpaid=0,unpaidAmt=0,oldestMiss=null;
+  while(n<1200){
+    due=addMonths(start,n);
+    if(due>horizon)break;
+    var avg=stWeighted(it,prev,due),amt=(avg+rolled)*r,key=isoOf(due),mk=pm[key];
+    var inY=due>=yA&&due<=yB;
+    if(inY)earned+=amt;
+    if(mk){if(inY)collected+=amt;}
+    else{rolled+=amt;unpaid++;unpaidAmt+=amt;if(!oldestMiss)oldestMiss=key;}
+    rows.push({due:key,amt:amt,avg:avg,paid:!!mk,on:(typeof mk==="string"?mk:null),inY:inY});
+    prev=due;n++;
+  }
+  var nb=it.settled?0:stBalanceAt(it,NOW);
+  return{earned:earned,collected:collected,held:it.settled?0:nb+rolled,bal:nb,rolled:rolled,rows:rows,
+    unpaid:unpaid,unpaidAmt:unpaidAmt,oldestMiss:oldestMiss,
+    next:{due:isoOf(addMonths(start,n)),amt:(nb+rolled)*r}};
+}
+
+/* ---------- lines ---------- */
+/* rent arrives in pieces; keeping each one lets a wrong entry be removed */
+function leaseGot(it){
+  if(Array.isArray(it.gots))return it.gots.reduce(function(s,g){return s+(+g.amt||0);},0);
+  return +it.got||0;
+}
+function lineFor(it,Y){
+  if(it.type==="ltloan"){
+    var L=ltWalk(it,Y),meta=[t("mRate",{r:(+it.rate||0)}),t("mRunning",{d:dur(P(it.start),NOW)})];
+    if(L.collected>0)meta.push(t("mRepaid",{v:money(L.collected)}));
+    if(L.lent>0)meta.push(t("mLentAgain",{v:money(L.lent)}));
+    if(it.settled)meta=[t("mSettled",{d:it.settledOn||""})];
+    return{it:it,earned:L.earned,collected:L.collected,held:L.held,meta:meta,calc:L,flag:it.settled?"done":""};
+  }
+  if(it.type==="stloan"){
+    var T=stWalk(it,Y),m2=[t("mRate",{r:(+it.rate||0)}),t("mOut",{v:money(T.bal)})];
+    if(T.unpaid>0)m2.push(T.unpaid===1?t("mUnpaid1"):t("mUnpaid",{n:T.unpaid}));
+    if(it.settled)m2=[t("mSettled",{d:it.settledOn||""})];
+    return{it:it,earned:T.earned,collected:T.collected,held:T.held,meta:m2,calc:T,
+      flag:it.settled?"done":(T.unpaid>=2?"late":T.unpaid===1?"soon":"")};
+  }
+  if(it.type==="lease"){
+    var m=sliceInYear(it.start,it.end,Y),earned=m*(+it.rent||0);
+    var got=leaseGot(it),ended=it.end&&P(it.end)<NOW;
+    var full=(+it.rent||0)*(it.end?sliceInYear(it.start,it.end,P(it.end).getFullYear()):m);
+    var meta3=[t("mRent",{v:money(+it.rent||0)}),t("mMonthsIn",{m:(Math.round(m*100)/100),y:Y})];
+    if(got>0)meta3.push(t("mCollected",{v:money(got)}));
+    var flag="";
+    if(ended&&got<earned-0.5)flag="late";
+    else if(it.end&&!ended&&daysBetween(NOW,P(it.end))<=30)flag="soon";
+    else if(got>=earned-0.5&&earned>0)flag="done";
+    var due=Math.max(0,earned-got);
+    return{it:it,earned:earned,collected:Math.min(got,earned),held:due,meta:meta3,
+      calc:{months:m,got:got,due:due,ended:ended,full:full},flag:flag};
+  }
+  if(it.type==="cycle"){
+    var goods=+it.cost||0,extra=+it.extra||0,cst=goods+extra,rev=+it.revenue||0,bgt=it.bought||"";
+    /* still in the store: the cash has gone out and the result is not known,
+       so it counts as money tied up, never as profit, until the sale happens */
+    if(!it.sold){
+      var hm=bgt?months(P(bgt),NOW):0;
+      return{it:it,earned:0,collected:0,held:cst,
+        meta:[t("boughtLbl")+" "+(bgt||"—"),bgt?t("heldSoFar",{m:hm.toFixed(1)}):"",t("tiedUpLbl")+" "+money(cst)].filter(Boolean),
+        calc:{hm:hm,cost:cst,open:true},flag:"open"};
+    }
+    var span=bgt?months(P(bgt),P(it.sold)):0,gain=rev-cst;
+    var e=inYear(it.sold,Y)?gain:0;
+    var pm=(span>0.03&&cst>0)?(gain/cst*100)/span:null;
+    return{it:it,earned:e,collected:e,held:0,
+      meta:[(bgt?bgt+" → ":"")+it.sold,
+            span>0?t("heldMo",{m:span.toFixed(1)}):"",
+            money(cst)+" → "+money(rev)].filter(Boolean),
+      calc:{hm:span,cost:cst,rev:rev,pm:pm,open:false},flag:""};
+  }
+  return{it:it,earned:0,collected:0,held:0,meta:[],calc:{},flag:""};
+}
+function evaluate(Y){
+  var earned=0,costs=0,collected=0,outLoan=0,unpaid=0;
+  var lines=S.items.map(function(it){return lineFor(it,Y);});
+  lines.forEach(function(l){
+    if(l.earned>0){earned+=l.earned;collected+=l.collected;
+      unpaid+=Math.max(0,l.earned-l.collected);}
+    if(l.earned<0)costs+=-l.earned;
+    if(l.it.type==="ltloan"||l.it.type==="stloan")outLoan+=l.held;
+  });
+  return{earned:earned,costs:costs,collected:collected,paper:0,outLoan:outLoan,
+    uncollected:unpaid,net:earned-costs,lines:lines};
+}
+function modSummary(key,R){
+  var ls=R.lines.filter(function(l){return modOf(l.it)===key;});
+  var e=0,h=0,alerts=0;
+  ls.forEach(function(l){e+=l.earned;h+=l.held;if(l.flag==="late")alerts++;});
+  return{lines:ls,count:ls.length,earned:e,held:h,alerts:alerts};
+}
+/* what actually needs doing, newest trouble first */
+function attention(R){
+  var out=[];
+  R.lines.forEach(function(l){
+    if(l.it.settled)return;
+    if(l.it.type==="stloan"&&l.calc.unpaid>0)
+      out.push({id:l.it.id,mod:"stloan",rank:l.calc.unpaid>=2?0:1,
+        title:l.it.name,why:(l.calc.unpaid===1?t("aUnpaid1",{d:l.calc.oldestMiss}):t("aUnpaid",{n:l.calc.unpaid,d:l.calc.oldestMiss})),
+        amt:l.calc.unpaidAmt,tone:l.calc.unpaid>=2?"late":"soon"});
+    if(l.it.type==="lease"&&l.flag==="late")
+      out.push({id:l.it.id,mod:"lease",rank:0,title:l.it.name,
+        why:t("aTermEnded",{d:l.it.end}),amt:l.calc.due,tone:"late"});
+    if(l.it.type==="lease"&&l.flag==="soon")
+      out.push({id:l.it.id,mod:"lease",rank:2,title:l.it.name,
+        why:t("aTermEnds",{d:l.it.end,n:daysBetween(NOW,P(l.it.end))}),amt:l.calc.due||l.earned,tone:"soon"});
+  });
+  return out.sort(function(a,b){return a.rank-b.rank||b.amt-a.amt;});
+}
+/* one list of every borrower, whichever ledger they sit in */
+function debtors(R){
+  return R.lines.filter(function(l){return (l.it.type==="ltloan"||l.it.type==="stloan")&&!l.it.settled&&l.held>0;})
+    .sort(function(a,b){var r={late:0,soon:1,open:2,"":3},ra=r[a.flag],rb=r[b.flag];
+      if(ra===undefined)ra=3;if(rb===undefined)rb=3;
+      return (ra-rb)||(b.held-a.held);});
+}
+/* ---- the four readings ----
+   aging: money out, split by how many months of interest are unpaid.
+   xirr : the rate that makes every dated cash movement balance to zero.
+   real : nominal return adjusted by a rate the user typed, never assumed.
+   bedr : how much of the book can go bad before the rate stops covering it. */
+function aging(R){
+  var b={cur:0,m1:0,m23:0,m3:0},total=0;
+  R.lines.forEach(function(l){
+    if((l.it.type!=="ltloan"&&l.it.type!=="stloan")||l.it.settled||l.held<=0)return;
+    total+=l.held;
+    var u=(l.it.type==="stloan")?(l.calc.unpaid||0):0;
+    if(u===0)b.cur+=l.held; else if(u===1)b.m1+=l.held;
+    else if(u<=3)b.m23+=l.held; else b.m3+=l.held;
+  });
+  b.total=total;return b;
+}
+function cashFlows(R){
+  var f=[];
+  R.lines.forEach(function(l){
+    var it=l.it;
+    if(it.type!=="ltloan"&&it.type!=="stloan")return;
+    f.push({d:P(it.start),v:-(+it.amount||0)});
+    (it.moves||[]).forEach(function(m){
+      f.push({d:P(m.date),v:(m.kind==="repay"?1:-1)*Math.abs(+m.amt||0)});});
+    if(it.type==="stloan"&&l.calc.rows)
+      l.calc.rows.forEach(function(r){if(r.paid)f.push({d:P(r.on||r.due),v:r.amt});});
+    if(l.held>0)f.push({d:NOW,v:l.held});
+  });
+  return f.sort(function(a,b){return a.d-b.d;});
+}
+function xirr(f){
+  if(f.length<2)return null;
+  if(!f.some(function(x){return x.v>0;})||!f.some(function(x){return x.v<0;}))return null;
+  var t0=f[0].d;
+  function npv(r){var s=0;for(var i=0;i<f.length;i++)s+=f[i].v/Math.pow(1+r,(f[i].d-t0)/(365.25*86400000));return s;}
+  var lo=-0.9999,hi=10;
+  if(npv(lo)<0||npv(hi)>0)return null;
+  for(var i=0;i<160;i++){var m=(lo+hi)/2;if(npv(m)>0)lo=m;else hi=m;}
+  var out=(lo+hi)/2;
+  return isFinite(out)?out:null;
+}
+/* depreciation between the earliest rate saved this year and the latest */
+function fxChange(){
+  var h=(S.fx||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  if(h.length<2)return null;
+  var last=h[h.length-1],first=h[0];
+  for(var i=0;i<h.length;i++){if(P(h[i].date).getFullYear()===S.year){first=h[i];break;}}
+  if(first===last)first=h[h.length-2];
+  if(!(+first.rate>0)||!(+last.rate>0))return null;
+  return{from:first,to:last,dep:(+last.rate)/(+first.rate)-1};
+}
+function avgRate(R){
+  var w=0,tot=0;
+  R.lines.forEach(function(l){
+    if((l.it.type!=="ltloan"&&l.it.type!=="stloan")||l.it.settled||l.held<=0)return;
+    w+=l.held*(+l.it.rate||0);tot+=l.held;});
+  return tot>0?w/tot:0;
+}
+/* a few ratios that say something a total cannot */
+function health(R){
+  var loans=R.lines.filter(function(l){return (l.it.type==="ltloan"||l.it.type==="stloan")&&!l.it.settled;});
+  var out=loans.reduce(function(s,l){return s+l.held;},0);
+  var top=loans.slice().sort(function(a,b){return b.held-a.held;})[0];
+  var earnedLoans=loans.reduce(function(s,l){return s+l.earned;},0);
+  var elapsed=months(new Date(S.year,0,1),yearEdges(S.year)[1])||1;
+  return{out:out,
+    concentration:out>0&&top?top.held/out*100:0,topName:top?top.it.name:"",
+    yield:out>0?(earnedLoans/elapsed*12)/out*100:0,
+    collection:R.earned>0?R.collected/R.earned*100:100};
+}
+
+/* ---------- import ---------- */
+function sameAs(a,b){
+  return a.type===b.type&&String(a.name).trim()===String(b.name).trim()&&
+    Math.abs((+a.amount||+a.rent||0)-(+b.amount||+b.rent||0))<0.5&&
+    (a.start||"")===(b.start||"");
+}
+function importLedger(d){
+  var out=[],n=0,dupes=0;
+  if(d&&Array.isArray(d.people)&&!d.longTerm)d={longTerm:d};
+  if(d&&d.longTerm&&Array.isArray(d.longTerm.people))d.longTerm.people.forEach(function(p){
+    var ls=p.loans||[];
+    ls.forEach(function(L,i){
+      if(!(+L.amount>0)||!L.date)return;
+      out.push({id:uid(),type:"ltloan",name:String(p.name||"—")+(ls.length>1?" #"+(i+1):""),
+        amount:+L.amount,rate:+L.rate||0,start:L.date,note:"",
+        moves:(L.payments||[]).filter(function(y){return +y.amount>0&&y.date;})
+          .map(function(y){return{id:uid(),date:y.date,amt:+y.amount,kind:"repay"};})});
+      n++;});
+  });
+  if(d&&d.shortTerm&&Array.isArray(d.shortTerm.people))d.shortTerm.people.forEach(function(p){
+    if(!(+p.principal>0)||!p.date)return;
+    out.push({id:uid(),type:"stloan",name:String(p.name||"—"),amount:+p.principal,
+      rate:+p.rate||0,start:p.date,paid:p.paid||{},
+      note:(p.collateral&&p.collateral.note)?String(p.collateral.note):"",
+      moves:(p.moves||[]).filter(function(m){return +m.amt>0&&m.date;})
+        .map(function(m){return{id:uid(),date:m.date,amt:+m.amt,kind:m.kind==="repay"?"repay":"draw"};})});
+    n++;});
+  if(d&&d.land&&Array.isArray(d.land.plots))d.land.plots.forEach(function(pl){
+    if(!(+pl.rent>0)||!pl.start)return;
+    var mm=pl.end?sliceInYear(pl.start,pl.end,P(pl.end).getFullYear()):0;
+    out.push({id:uid(),type:"lease",name:String(pl.name||"—"),rent:+pl.rent,
+      start:pl.start,end:pl.end||"",value:0,got:pl.paid?(+pl.rent)*mm:0});
+    n++;});
+  var fresh=out.filter(function(o){
+    var hit=S.items.some(function(x){return sameAs(x,o);});
+    if(hit)dupes++;
+    return !hit;});
+  return{items:fresh,count:fresh.length,dupes:dupes,total:n};
+}
+function fxLatest(){
+  var h=(S.fx||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  return h.length?h[h.length-1]:null;
+}
+function backupBlob(){
+  return JSON.stringify({format:"iwp",version:5,savedAt:new Date().toISOString(),
+    cur:S.cur,lang:S.lang,fx:S.fx||[],fxRef:S.fxRef||"USD",items:S.items},null,2);
+}
+/* a flat sheet the bookkeeper can open, one row per item */
+function csvBlob(Y){
+  var R=evaluate(Y),rows=[["Ledger","Name","Started","Rate %/mo","Rate %/yr",
+    "Earned "+Y,"Received "+Y,"Outstanding","Status"]];
+  R.lines.forEach(function(l){
+    var it=l.it;
+    rows.push([MODS[modOf(it)].label,it.name,it.start||it.date||it.sold||"",
+      it.rate!==undefined?it.rate:"",it.rate!==undefined?ear(it.rate).toFixed(1):"",
+      Math.round(l.earned),Math.round(l.collected),Math.round(l.held),
+      it.settled?"settled":(l.flag||"")]);
+  });
+  rows.push([]);
+  rows.push(["Income earned",Math.round(R.earned)]);
+  rows.push(["Costs",Math.round(R.costs)]);
+  rows.push(["Profit",Math.round(R.net)]);
+  rows.push(["Of which not yet received",Math.round(R.uncollected)]);
+  return rows.map(function(r){return r.map(function(c){
+    var v=String(c==null?"":c);
+    return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(",");}).join("\r\n");
+}
+function restoreFrom(d){
+  if(!d||!Array.isArray(d.items))return 0;
+  var clean=d.items.filter(known)
+    .map(function(it){var o=Object.assign({},it);o.id=o.id||uid();
+      if(o.moves&&!Array.isArray(o.moves))o.moves=[];
+      if(o.paid&&typeof o.paid!=="object")o.paid={};
+      return o;});
+  S.items=clean;
+  if(d.cur&&SYM[d.cur])S.cur=d.cur;
+  if(d.lang==="zh"||d.lang==="en")S.lang=d.lang;
+  if(Array.isArray(d.fx))S.fx=d.fx.filter(function(x){return x&&validDate(x.date)&&+x.rate>0;});
+  if(d.fxRef)S.fxRef=d.fxRef;
+  return clean.length;
+}
+
+/* ---------- view state ---------- */
+var VIEW="home",openCard={},addOpen=false,editing=null,flash="",q="",undo=null,menuOpen=false;
+var quickKind="repay",quickFor=null,fxOpen=false;
+var screen=document.getElementById("screen");
+function $(id){return document.getElementById(id);}
+function each(sel,fn){Array.prototype.forEach.call(document.querySelectorAll(sel),fn);}
+function find(id){var r=null;S.items.forEach(function(x){if(x.id===id)r=x;});return r;}
+function years(){
+  var ys={};ys[NOW.getFullYear()]=1;
+  S.items.forEach(function(it){
+    [it.start,it.date,it.sold,it.end].forEach(function(d){if(d&&validDate(d))ys[P(d).getFullYear()]=1;});
+    (it.moves||[]).forEach(function(m){if(validDate(m.date))ys[P(m.date).getFullYear()]=1;});
+  });
+  return Object.keys(ys).map(Number).filter(function(y){return y<=NOW.getFullYear();}).sort(function(a,b){return b-a;});
+}
+
+/* ---------- home ---------- */
+function homeView(Y,R){
+  var h="",att=attention(R),H=health(R);
+  if(flash)h+='<div class="note"><span>'+flash+'</span></div>';
+
+  h+='<div class="todo'+(att.length?"":" calm")+'"><h2>'+esc(att.length?t("needs"):t("allclear"))+'</h2>';
+  if(!att.length)h+='<p class="allclear">'+esc(t("allclearBody"))+'</p>';
+  else att.slice(0,5).forEach(function(a){
+    h+='<div class="todoItem"><span class="tl"><span class="tt">'+esc(a.title)+'</span>'+
+      '<span class="ts">'+esc(a.why)+'</span></span>'+
+      '<span class="ta hide '+a.tone+'">'+esc(money(a.amt))+'</span>'+
+      '<button class="todoGo" data-jump="'+a.mod+'" data-item="'+a.id+'">'+esc(t("open"))+'</button></div>';
+  });
+  if(att.length>5)h+='<p class="allclear">'+esc(t("andMore",{n:att.length-5}))+'</p>';
+  h+='</div>';
+
+  h+='<div class="pos">'+
+    '<div class="cell wide"><span class="k">'+esc(t("profitIn",{y:Y}))+ib("profit")+'</span>'+
+      '<span class="v n hide">'+esc(money(R.net))+'</span>'+
+      '<span class="s hide">'+esc(R.costs>0?t("earnedLess",{e:money(R.earned),c:money(R.costs)}):t("earnedOnly",{e:money(R.earned)}))+
+      (R.uncollected>0?' \u00b7 '+esc(t("notReceived",{v:money(R.uncollected)})):'')+'</span></div>'+
+    '<div class="cell"><span class="k">'+esc(t("outOnLoan"))+ib("outloan")+'</span><span class="v n hide">'+esc(money(H.out))+'</span>'+
+      '<span class="s hide">'+(H.yield>0?esc(t("perYear",{v:H.yield.toFixed(1)+"%"}))+ib("yieldr"):'\u2014')+'</span></div>'+
+    '<div class="cell"><span class="k">'+esc(t("collected"))+ib("collected")+'</span><span class="v n hide">'+esc(H.collection.toFixed(0))+'%</span>'+
+      '<span class="s hide">'+esc(t("ofEarned",{a:money(R.collected),b:money(R.earned)}))+'</span></div>'+
+    '</div>'+inoteFor(["profit","outloan","collected","yieldr"]);
+
+  h+='<section><h3>'+esc(t("ledgers"))+'</h3><p class="sublede">'+esc(t("ledgersSub"))+'</p><div class="mods">';
+  ORDER.forEach(function(k){
+    var m=modSummary(k,R),MM=M(k),main,sub;
+    main=m.earned?((m.earned>0?"+":"\u2212")+money(Math.abs(m.earned))):"\u2014";
+    sub=m.held?t(k==="cycle"?"tiedUpIn":k==="lease"?"rentDueIn":"outstanding",{v:money(m.held)}):"";
+    h+='<button class="mod" data-go="'+k+'"><span class="dot" style="background:'+MODS[k].color+'"></span>'+
+      '<span class="l"><span class="t">'+esc(MM.label)+'</span><span class="m">'+
+        esc(m.count?(m.count+" "+(m.count===1?t("entry"):t("entries"))):t("nothingYet"))+
+        (m.alerts?' \u00b7 <span class="warn">'+esc(t("needChasing",{n:m.alerts}))+'</span>':'')+'</span></span>'+
+      '<span class="r"><span class="v n hide'+(m.earned||m.held?"":" zero")+'">'+esc(main)+'</span>'+
+        (sub?'<span class="sv hide">'+esc(sub)+'</span>':'')+'</span><span class="ch">›</span></button>';
+  });
+  h+='</div></section>';
+
+  if(S.items.length)h+='<section><h3>'+esc(t("statement"))+'</h3>'+
+    '<p class="sublede">'+esc(t("statementSub",{y:Y}))+'</p><div class="statement">'+
+      '<div class="srow">'+esc(t("incomeEarned"))+'<span class="v e n hide">'+esc(money(R.earned))+'</span></div>'+
+      (R.costs>0?'<div class="srow">'+esc(t("costs"))+'<span class="v s n hide">−'+esc(money(R.costs))+'</span></div>':'')+
+      '<div class="srow net">'+esc(t("profit"))+'<span class="v n hide">'+esc(money(R.net))+'</span></div>'+
+      (R.uncollected>0?'<p class="aside">'+t("asideUncollected",{v:esc(money(R.uncollected))})+ib("accrual")+'</p>':'')+
+
+      (H.out>0&&H.concentration>=40?'<p class="aside">'+t("asideConc",{p:H.concentration.toFixed(0),n:esc(H.topName)})+ib("conc")+'</p>':'')+
+      inoteFor(["accrual","conc"])+
+    '</div></section>';
+
+  var dl=debtors(R);
+  if(dl.length){
+    var owed=dl.reduce(function(a,l){return a+l.held;},0);
+    h+='<section><h3>'+esc(t("whoOwes"))+'</h3>'+
+      '<p class="sublede">'+esc(t("whoOwesSub",{n:dl.length,v:money(owed)}))+
+      (lakh(owed)?' \u00b7 '+esc(lakh(owed)):'')+'</p>';
+    dl.forEach(function(l){
+      var f=l.flag==="late"?t("chase"):l.flag==="soon"?t("due"):"";
+      h+='<button class="mod" data-jump="'+l.it.type+'" data-item="'+l.it.id+'">'+
+        '<span class="dot" style="background:'+MODS[l.it.type].color+'"></span>'+
+        '<span class="l"><span class="t">'+esc(l.it.name)+'</span>'+
+        '<span class="m">'+esc(l.meta.slice(0,2).join(" \u00b7 "))+'</span></span>'+
+        '<span class="r"><span class="v n hide">'+esc(money(l.held))+'</span>'+
+        (f?'<span class="sv" style="color:var(--'+(l.flag==="late"?"spent":"earned")+')">'+f+'</span>':'')+'</span>'+
+        '<span class="ch">\u203a</span></button>';});
+    h+='</section>';
+  }
+  /* four readings, in one quiet block */
+  var AG=aging(R),X=xirr(cashFlows(R)),FXC=fxChange(),avg=avgRate(R),H2=H;
+  if(AG.total>0||X!==null){
+    h+='<section><h3>'+esc(t("health"))+'</h3><p class="sublede">'+esc(t("healthSub"))+'</p>';
+    if(AG.total>0){
+      var segs=[["cur","#2C6850"],["m1","#B08A3E"],["m23","#C2663F"],["m3","#9A4030"]];
+      h+='<div class="hbox"><div class="hrow"><span class="hk">'+esc(t("ageTitle"))+ib("aging")+'</span></div>'+
+        '<div class="agebar">'+segs.map(function(sg){
+          return AG[sg[0]]>0?'<i style="width:'+(AG[sg[0]]/AG.total*100).toFixed(2)+'%;background:'+sg[1]+'"></i>':"";}).join("")+'</div>'+
+        '<div class="agekey">'+
+          '<span><i class="sw" style="background:#2C6850"></i>'+esc(t("ageCurrent"))+' <b>'+(AG.cur/AG.total*100).toFixed(0)+'%</b></span>'+
+          (AG.m1>0?'<span><i class="sw" style="background:#B08A3E"></i>'+esc(t("age1"))+' <b>'+(AG.m1/AG.total*100).toFixed(0)+'%</b></span>':'')+
+          (AG.m23>0?'<span><i class="sw" style="background:#C2663F"></i>'+esc(t("age23"))+' <b>'+(AG.m23/AG.total*100).toFixed(0)+'%</b></span>':'')+
+          (AG.m3>0?'<span><i class="sw" style="background:#9A4030"></i>'+esc(t("age3"))+' <b>'+(AG.m3/AG.total*100).toFixed(0)+'%</b></span>':'')+
+        '</div>'+((AG.m3>0)?'<p class="hs">'+esc(t("ageNote"))+'</p>':'')+inoteFor(["aging"])+'</div>';
+    }
+    if(X!==null)h+='<div class="hbox"><div class="hrow"><span class="hk">'+esc(t("xirrTitle"))+ib("xirr")+'</span>'+
+      '<span class="hv hide '+(X>0?"good":"bad")+'">'+(X*100).toFixed(1)+'%</span></div>'+
+      '<p class="hs">'+esc(t("xirrSub"))+' \u00b7 '+esc(t("xirrVsSimple",{v:H2.yield.toFixed(1)+"%"}))+'</p>'+inoteFor(["xirr"])+'</div>';
+    var nominal=X!==null?X*100:H2.yield;
+    if(FXC&&Math.abs(FXC.dep)>0.0001){
+      var realPc=((1+nominal/100)/(1+FXC.dep)-1)*100;
+      h+='<div class="hbox"><div class="hrow"><span class="hk">'+esc(t("realTitle"))+ib("real")+'</span>'+
+        '<span class="hv hide '+(realPc>0?"good":"bad")+'">'+realPc.toFixed(1)+'%</span></div>'+
+        '<p class="hs">'+esc(t("realSub",{n:nominal.toFixed(1),r:realPc.toFixed(1)}))+' \u00b7 '+
+        esc(t("fxChange",{p:Math.abs(FXC.dep*100).toFixed(1),dir:FXC.dep>0?t("weaker"):t("stronger"),d:FXC.from.date}))+'</p>'+inoteFor(["real"])+'</div>';
+    } else if(AG.total>0){
+      h+='<div class="hbox"><div class="hrow"><span class="hk">'+esc(t("realTitle"))+ib("real")+'</span>'+
+        '<span class="hv" style="color:var(--faint)">\u2014</span></div>'+
+        '<p class="hs">'+esc((S.fx||[]).length?t("realFlat"):t("realNeed"))+' '+
+        '<button class="qbtn" id="fxJump" style="margin-left:4px">'+esc(t("fxTitle"))+'</button></p>'+inoteFor(["real"])+'</div>';
+    }
+    if(avg>0){
+      var e=Math.pow(1+avg/100,12)-1;
+      h+='<div class="hbox"><div class="hrow"><span class="hk">'+esc(t("beTitle"))+ib("bedr")+'</span>'+
+        '<span class="hv hide">'+(e/(1+e)*100).toFixed(0)+'%</span></div>'+
+        '<p class="hs">'+esc(t("beSub",{r:avg.toFixed(2),p:(e/(1+e)*100).toFixed(0)}))+
+        ' \u00b7 '+esc(t("earIs",{v:(e*100).toFixed(1)+"%"}))+ib("ear")+'</p>'+inoteFor(["bedr","ear"])+'</div>';
+    }
+    h+='</section>';
+  }
+  var held=R.lines.filter(function(l){return l.held>0;}).sort(function(a,b){return b.held-a.held;});
+  if(held.length){
+    var tot=held.reduce(function(s,l){return s+l.held;},0);
+    h+='<section><h3>'+esc(t("wealth"))+'</h3>'+
+      '<p class="sublede">'+esc(t("wealthSub",{v:money(tot)}))+(lakh(tot)?' \u00b7 '+esc(lakh(tot)):'')+'</p>'+
+      '<div class="band">'+held.map(function(l){
+        return '<i style="width:'+(l.held/tot*100).toFixed(2)+'%;background:'+MODS[modOf(l.it)].color+'"></i>';}).join("")+'</div>'+
+      held.slice(0,8).map(function(l){
+        return '<div class="lg"><span class="sw" style="background:'+MODS[modOf(l.it)].color+'"></span>'+
+          '<span class="nm">'+esc(l.it.name)+'</span><span class="pc">'+(l.held/tot*100).toFixed(0)+'%</span>'+
+          '<span class="vl hide">'+esc(money(l.held))+'</span></div>';}).join("")+'</section>';
+  }
+  return h;
+}
+
+/* ---------- workings ---------- */
+function ltBody(l){
+  var it=l.it,C=l.calc;
+  var h='<dl class="dl"><dt>'+esc(t("lent"))+'</dt><dd>'+esc(t("lentOn",{v:money(+it.amount||0),d:it.start}))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("rate"))+'</dt><dd>'+esc(t("ratePerMonth",{r:(+it.rate||0)}))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("sameYearly"))+ib("ear")+'</dt><dd class="q">'+esc(t("yearlyCompound",{r:ear(it.rate).toFixed(1)}))+'</dd></dl>'+inoteFor(["ear"])+
+    '<dl class="dl"><dt>'+esc(t("runningFor"))+'</dt><dd>'+esc(dur(P(it.start),NOW))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("interestIn",{y:S.year}))+'</dt><dd class="e">'+esc(money(C.earned))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("interestSince"))+'</dt><dd>'+esc(money(C.lifetime))+'</dd></dl>'+
+    (C.collected>0?'<dl class="dl"><dt>'+esc(t("intReceived",{y:S.year}))+'</dt><dd class="h">'+esc(money(C.collected))+
+      (C.collected>C.earned+1?' <span class="q">'+esc(t("inclEarlier",{v:money(C.collected-C.earned)}))+'</span>':'')+'</dd></dl>':'')+
+    (C.principalBack>0?'<dl class="dl"><dt>'+esc(t("capitalBack",{y:S.year}))+ib("capital")+'</dt><dd class="q">'+esc(t("notIncome",{v:money(C.principalBack)}))+'</dd></dl>'+inoteFor(["capital"]):'')+
+    '<dl class="dl"><dt>'+esc(it.settled?t("settledLbl"):t("owedNow"))+'</dt><dd class="h">'+esc(money(C.held))+'</dd></dl>'+
+    (it.note?'<dl class="dl"><dt>'+esc(t("note"))+'</dt><dd class="q">'+esc(it.note)+'</dd></dl>':'');
+  h+='<p class="subhead">'+esc(t("movements"))+'</p>'+mvList(it)+(it.settled?"":mvAdd(it));
+  return h+itemActs(it,true);
+}
+function stBody(l){
+  var it=l.it,C=l.calc,base=stBalanceAt(it,NOW)*(+it.rate||0)/100;
+  var h='<dl class="dl"><dt>'+esc(t("principalOut"))+'</dt><dd class="h">'+esc(money(C.bal))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("rate"))+ib("ear")+'</dt><dd>'+esc(t("ratePerMonth",{r:(+it.rate||0)}))+' \u00b7 '+esc(t("yearlyCompound",{r:ear(it.rate).toFixed(1)}))+'</dd></dl>'+inoteFor(["ear"])+
+    '<dl class="dl"><dt>'+esc(t("cleanMonth"))+ib("cleanmo")+'</dt><dd>'+esc(money(base))+'</dd></dl>'+inoteFor(["cleanmo"])+
+    '<dl class="dl"><dt>'+esc(t("avgBalLbl"))+ib("dwab")+'</dt><dd class="q">'+esc(t("avgBalNote"))+'</dd></dl>'+inoteFor(["dwab"])+
+    (C.rolled>0?'<dl class="dl"><dt>'+esc(t("rolledIn"))+ib("rolled")+'</dt><dd class="e">'+esc(money(C.rolled))+'</dd></dl>'+inoteFor(["rolled"]):'')+
+    '<dl class="dl"><dt>'+esc(t("nextMonth"))+'</dt><dd>'+esc(t("nextOn",{v:money(C.next.amt),d:C.next.due}))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("interestIn",{y:S.year}))+'</dt><dd class="e">'+esc(money(C.earned))+'</dd></dl>'+
+    (it.note?'<dl class="dl"><dt>'+esc(t("note"))+'</dt><dd class="q">'+esc(it.note)+'</dd></dl>':'');
+  var rows=C.rows.slice().reverse();
+  h+='<p class="subhead">'+esc(t("eachMonth"))+'</p>';
+  if(!rows.length)h+='<p class="hint" style="margin:0">'+esc(t("firstNotDue"))+'</p>';
+  h+=rows.slice(0,12).map(function(r){
+    var late=!r.paid&&C.oldestMiss&&r.due<=C.oldestMiss;
+    return '<div class="mrow'+(r.paid?" done":(late?" late":""))+'" data-tick="'+it.id+'" data-k="'+esc(r.due)+'">'+
+      '<span class="box">✓</span><span class="dt">'+esc(r.due)+
+        (((it.moves||[]).length||C.rolled>0)?' · on '+esc(money(r.avg)):'')+'</span>'+
+      (r.on?'<span class="on">'+esc(r.on)+'</span>':'')+
+      '<span class="va">'+esc(money(r.amt))+'</span></div>';}).join("");
+  if(rows.length>12)h+='<p class="hint" style="margin:6px 0 0">'+esc(t("showingLast",{n:rows.length}))+'</p>';
+  if(!it.settled)h+='<div class="mrow wait"><span class="box"></span><span class="dt">'+esc(C.next.due)+' · '+esc(t("notDueYet"))+'</span>'+
+     '<span class="va">'+esc(money(C.next.amt))+'</span></div>';
+  h+='<p class="subhead">'+esc(t("movements"))+'</p>'+mvList(it)+(it.settled?"":mvAdd(it));
+  return h+itemActs(it,true);
+}
+function leaseBody(l){
+  var it=l.it,C=l.calc;
+  var h='<dl class="dl"><dt>'+esc(t("rentMonthly"))+'</dt><dd>'+esc(t("rentPerMonth",{v:money(+it.rent||0)}))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("term"))+'</dt><dd>'+esc(it.start)+' \u2192 '+esc(it.end||t("ongoing"))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("monthsInside",{y:S.year}))+'</dt><dd>'+(Math.round(C.months*100)/100)+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("rentFor",{y:S.year}))+'</dt><dd class="e">'+esc(money(l.earned))+'</dd></dl>'+
+    '<dl class="dl"><dt>'+esc(t("collectedSoFar"))+'</dt><dd class="h">'+esc(money(C.got))+'</dd></dl>'+
+    (C.due>0.5?'<dl class="dl"><dt>'+esc(t("stillToCollect"))+'</dt><dd class="e">'+esc(money(C.due))+'</dd></dl>':'')+
+    (+it.value?'<dl class="dl"><dt>'+esc(t("landWorth"))+'</dt><dd class="h">'+esc(money(+it.value))+'</dd></dl>':'');
+  h+='<p class="subhead">'+esc(t("rentReceived"))+'</p>';
+  var gs=Array.isArray(it.gots)?it.gots:((+it.got>0)?[{id:"legacy",date:it.start,amt:+it.got}]:[]);
+  h+=gs.length?gs.slice().sort(function(a,b){return a.date<b.date?-1:1;}).map(function(g){
+    return '<div class="mv"><span class="k r">'+esc(t("paid"))+'</span><span class="dt">'+esc(g.date)+'</span>'+
+      '<span class="vv">'+esc(money(+g.amt||0))+'</span>'+
+      '<button class="x" data-delgot="'+g.id+'" data-on="'+it.id+'" aria-label="Remove">\u00d7</button></div>';}).join("")
+    :'<p class="hint" style="margin:0">'+esc(t("noRentYet"))+'</p>';
+  h+='<div class="grid"><div><label for="rc_'+it.id+'">'+esc(t("amount"))+'</label>'+
+      '<input id="rc_'+it.id+'" type="text" inputmode="decimal" autocomplete="off" value="'+(C.due>0.5?Math.round(C.due):"")+'"></div>'+
+      '<div><label for="rd_'+it.id+'">'+esc(t("date"))+'</label><input id="rd_'+it.id+'" type="date" value="'+esc(isoOf(NOW))+'"></div>'+
+      '<button class="solid wide" data-collect="'+it.id+'">'+esc(t("recordIt"))+'</button></div>'+
+      '<p class="err" data-gerr="'+it.id+'" hidden></p>';
+  return h+itemActs(it,false);
+}
+function plainBody(l){
+  var it=l.it,h="";
+  if(it.type==="cycle"){
+    var C3=l.calc,goods3=+it.cost||0,extra3=+it.extra||0,cst3=goods3+extra3,rev3=+it.revenue||0;
+    h='<dl class="dl"><dt>'+esc(t("boughtLbl"))+'</dt><dd>'+esc(it.bought||"—")+'</dd></dl>'+
+      '<dl class="dl"><dt>'+esc(t("fGoodsCost"))+'</dt><dd>'+esc(money(goods3))+'</dd></dl>'+
+      (extra3>0?'<dl class="dl"><dt>'+esc(t("fOtherCost"))+'</dt><dd>'+esc(money(extra3))+'</dd></dl>'+
+        '<dl class="dl"><dt>'+esc(t("totalIn"))+'</dt><dd class="h">'+esc(money(cst3))+'</dd></dl>':'');
+    if(C3.open){
+      /* open position: the money is out there and the result is not known yet */
+      h+='<dl class="dl"><dt>'+esc(t("heldLbl"))+'</dt><dd class="h">'+
+          esc(C3.hm>0?t("monthsUnit",{m:C3.hm.toFixed(1)}):"—")+'</dd></dl>'+
+        '<dl class="dl"><dt>'+esc(t("tiedUpLbl"))+ib("tied")+'</dt><dd class="h">'+esc(money(cst3))+'</dd></dl>'+
+        inoteFor(["tied"])+
+        '<p class="hint" style="margin-top:10px">'+esc(t("roundNote"))+'</p>'+
+        '<p class="subhead">'+esc(t("closeRound"))+'</p>'+
+        '<div class="grid"><div><label for="cs_'+it.id+'">'+esc(t("soldForLbl"))+'</label>'+
+          '<input id="cs_'+it.id+'" type="text" inputmode="decimal" autocomplete="off" value=""></div>'+
+          '<div><label for="cd_'+it.id+'">'+esc(t("soldOn"))+'</label>'+
+          '<input id="cd_'+it.id+'" type="date" value="'+esc(isoOf(NOW))+'"></div>'+
+          '<button class="solid wide" data-close="'+it.id+'">'+esc(t("closeRound"))+'</button></div>'+
+        '<p class="err" data-cerr="'+it.id+'" hidden></p>';
+    } else {
+      var gain3=rev3-cst3;
+      h+='<dl class="dl"><dt>'+esc(t("soldFor"))+'</dt><dd>'+esc(money(rev3))+'</dd></dl>'+
+        '<dl class="dl"><dt>'+esc(t("heldLbl"))+'</dt><dd>'+esc(C3.hm>0?t("monthsUnit",{m:C3.hm.toFixed(1)}):"—")+'</dd></dl>'+
+        '<dl class="dl"><dt>'+esc(t("profitLbl"))+'</dt><dd class="'+(gain3>=0?"e":"s")+'">'+esc(money(gain3))+'</dd></dl>'+
+        '<dl class="dl"><dt>'+esc(t("margin"))+ib("margin")+'</dt><dd class="q">'+(cst3>0?(gain3/cst3*100).toFixed(1)+'%':"—")+'</dd></dl>'+
+        ((C3.pm!==null&&C3.pm!==undefined)?'<dl class="dl"><dt>'+esc(t("perMonthHeld"))+ib("permo")+'</dt><dd class="q">'+C3.pm.toFixed(2)+'%</dd></dl>':'')+
+        '<dl class="dl"><dt>'+esc(t("countedIn"))+'</dt><dd>'+esc(it.sold||"—")+'</dd></dl>'+
+        inoteFor(["margin","permo"]);
+    }
+  }
+  return h+itemActs(it,false);
+}
+function itemActs(it,canSettle){
+  return '<div class="acts"><button class="act" data-edit="'+it.id+'">'+esc(t("editDetails"))+'</button>'+
+    (canSettle?'<button class="act key" data-settle="'+it.id+'">'+esc(it.settled?t("reopen"):t("markSettled"))+'</button>':'')+
+    '<button class="act bad" data-del="'+it.id+'">'+esc(t("del"))+'</button></div>';
+}
+function mvList(it){
+  var ms=(it.moves||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  if(!ms.length)return '<p class="hint" style="margin:0">'+esc(t("noMovements"))+'</p>';
+  return ms.map(function(m){
+    return '<div class="mv"><span class="k '+(m.kind==="repay"?"r":"d")+'">'+(m.kind==="repay"?t("paid"):t("lentMore"))+'</span>'+
+      '<span class="dt">'+esc(m.date)+'</span>'+
+      '<span class="vv">'+(m.kind==="repay"?"−":"+")+esc(money(Math.abs(+m.amt||0)))+'</span>'+
+      '<button class="x" data-delmv="'+m.id+'" data-on="'+it.id+'" aria-label="Remove">×</button></div>';}).join("");
+}
+function mvAdd(it){
+  return '<div class="grid">'+
+    '<div><label for="mk_'+it.id+'">'+esc(t("whatHappened"))+'</label><select class="fld" id="mk_'+it.id+'">'+
+      '<option value="repay"'+((quickFor===it.id&&quickKind==="repay")?" selected":"")+'>'+esc(t("theyPaid"))+'</option>'+
+      '<option value="draw"'+((quickFor===it.id&&quickKind==="draw")?" selected":"")+'>'+esc(t("iLentMore"))+'</option></select></div>'+
+    '<div><label for="ma_'+it.id+'">'+esc(t("amount"))+'</label><input id="ma_'+it.id+'" type="text" inputmode="decimal" autocomplete="off"></div>'+
+    '<div><label for="md_'+it.id+'">'+esc(t("date"))+'</label><input id="md_'+it.id+'" type="date" value="'+esc(isoOf(NOW))+'"></div>'+
+    '<button class="solid wide" data-addmv="'+it.id+'">'+esc(t("recordIt"))+'</button></div>'+
+    '<p class="err" data-mverr="'+it.id+'" hidden></p>';
+}
+
+/* ---------- forms ---------- */
+function FIELDS(ty){
+  if(ty==="ltloan")return[["name",t("fBorrower"),"text"],["amount",t("fAmountLent"),"number"],
+    ["rate",t("fRateMo"),"number","2"],["start",t("fLentOn"),"date",isoOf(NOW)],["note",t("fNote"),"text"]];
+  if(ty==="stloan")return[["name",t("fBorrower"),"text"],["amount",t("fPrincipal"),"number"],
+    ["rate",t("fRateMo"),"number","3"],["start",t("fLentOn"),"date",isoOf(NOW)],["note",t("fNote"),"text"]];
+  if(ty==="lease")return[["name",t("fName"),"text"],["rent",t("fRent"),"number"],
+    ["start",t("fStarts"),"date",isoOf(NOW)],["end",t("fEnds"),"date"]];
+  if(ty==="cycle")return[["name",t("fWhatItWas"),"text"],["cost",t("fGoodsCost"),"number"],
+    ["extra",t("fOtherCost"),"number","0"],
+    ["bought",t("fBoughtOn"),"date",isoOf(NOW)],
+    ["revenue",t("fTotalSold"),"number"],["sold",t("fSoldOnOpt"),"date"]];
+  return[];
+}
+function formPanel(ty,src,idPrefix,submitLabel,action,extra){
+  return '<div class="panel">'+(extra||"")+
+    '<div class="grid">'+FIELDS(ty).map(function(f){
+      var v=src?(src[f[0]]===undefined?"":src[f[0]]):(f[3]||"");
+      return '<div><label for="'+idPrefix+f[0]+'">'+esc(f[1])+'</label>'+
+        '<input id="'+idPrefix+f[0]+'" type="'+(f[2]==="number"?"text":f[2])+'"'+
+        (f[2]==="number"?' inputmode="decimal" autocomplete="off"':'')+
+        ' value="'+esc(v)+'"></div>';}).join("")+
+    '<button class="solid wide" data-'+action+'="1">'+esc(submitLabel)+'</button></div>'+
+    '<p class="err" id="'+idPrefix+'err" hidden></p></div>';
+}
+function readForm(ty,prefix){
+  var o={};
+  FIELDS(ty).forEach(function(f){
+    var el=$(prefix+f[0]),v=el?String(el.value).trim():"";
+    o[f[0]]=(f[2]==="number")?num(v):v;});
+  return o;
+}
+function validate(ty,o){
+  if(!o.name)return t("eName");
+  var numFields=FIELDS(ty).filter(function(f){return f[2]==="number";});
+  for(var i=0;i<numFields.length;i++){
+    var nk=numFields[i][0];
+    /* an optional figure left blank, or missing from an older saved entry,
+       is zero rather than an error */
+    if(o[nk]===undefined||o[nk]==="")o[nk]=0;
+    if(isNaN(o[nk]))return t("eNotNumber",{f:numFields[i][1]});
+  }
+  if(ty==="ltloan"||ty==="stloan"){
+    if(!(o.amount>0))return t("eHowMuch");
+    if(!(o.rate>=0&&o.rate<=100))return t("eRate");
+    if(!validDate(o.start))return t("eDateValid");
+    if(P(o.start)>NOW)return t("eFuture");
+  }
+  if(ty==="lease"){
+    if(!(o.rent>0))return t("eRent");
+    if(!validDate(o.start))return t("eStart");
+    if(o.end&&!validDate(o.end))return t("eEndDate");
+    if(o.end&&P(o.end)<=P(o.start))return t("eEndAfter");
+  }
+  if(ty==="cycle"){
+    if(!(o.cost>0))return t("eCostPos");
+    if(o.extra<0)return t("eCostPos");
+    if(!validDate(o.bought))return t("eBuyDate");
+    if(P(o.bought)>NOW)return t("eFuture");
+    if(o.sold){
+      if(!validDate(o.sold))return t("eSaleDate");
+      if(P(o.sold)<P(o.bought))return t("eSellAfter");
+      if(!(o.revenue>0))return t("eSoldFor");
+    }
+  }
+  return "";
+}
+
+/* ---------- module page ---------- */
+function modView(key,Y,R){
+  var MM=M(key),m=modSummary(key,R);
+  var big=m.earned?((m.earned>0?"+":"−")+money(Math.abs(m.earned))):money(0);
+  var sub=t("earnedIn",{y:Y})+(m.held?" \u00b7 "+t(key==="cycle"?"stillTied":key==="lease"?"stillDue":"stillOut",{v:money(m.held)}):"");
+  var h='<div class="mhead"><p class="eyebrow">'+esc(MM.label)+'</p>'+
+    '<p class="big n hide">'+esc(big)+'</p><p class="sub">'+esc(sub)+'</p></div>'+
+    '<div class="how">'+MM.how+'</div>';
+  if(m.count>=6)h+='<input class="srch" id="q" type="text" placeholder="'+esc(t("search",{m:MM.label}))+'" value="'+esc(q)+'">';
+  h+='<div class="ctl" style="margin:10px 0 6px"><button class="chip" id="addToggle" aria-pressed="'+addOpen+'">'+
+      (addOpen?t("close"):t("addA",{o:MM.one}))+'</button></div>';
+  if(addOpen)h+=formPanel(key,null,"fl_",t("add"),"addgo","");
+
+  var list=m.lines;
+  if(q)list=list.filter(function(l){return l.it.name.toLowerCase().indexOf(q.toLowerCase())>=0;});
+  list=list.slice().sort(function(a,b){
+    var r={late:0,soon:1,"":2,done:3};
+    var ra=r[a.flag],rb=r[b.flag];if(ra===undefined)ra=9;if(rb===undefined)rb=9;
+    return (ra-rb)||(Math.abs(b.earned)-Math.abs(a.earned))||(b.held-a.held);});
+
+  if(!m.count)h+='<div class="blank"><b>'+esc(t("nothingHere"))+'</b>'+esc(t("addFirst",{o:MM.one}))+'</div>';
+  else if(!list.length)h+='<div class="blank"><b>'+esc(t("noMatch"))+'</b>'+esc(t("noMatchSub",{q:q}))+'</div>';
+
+  list.forEach(function(l){
+    var e=l.earned,op=!!openCard[l.it.id];
+    var fig=(e!==0?(e>0?"+":"−")+money(Math.abs(e)):"—");
+    var flagTxt=l.flag==="late"?t("chase"):l.flag==="soon"?t("due"):l.flag==="done"?t("clear"):
+                l.flag==="open"?t("roundOpen"):"";
+    h+='<div class="card'+(l.it.settled?" settled":"")+'"><button class="ctop" data-card="'+l.it.id+'">'+
+      '<span class="crow"><span class="cname">'+esc(l.it.name)+'</span>'+
+      (flagTxt?'<span class="flag '+l.flag+'">'+flagTxt+'</span>':'')+
+      '<span class="cnum n hide '+(e>0?"e":e<0?"s":"")+'">'+esc(fig)+'</span></span>'+
+      '<span class="cmeta">'+l.meta.map(function(x){return '<span>'+esc(x)+'</span>';}).join("")+'</span></button>'+
+      ((!op&&!l.it.settled&&(key==="ltloan"||key==="stloan"))
+        ? '<div class="quick"><button class="qbtn" data-quick="repay" data-p="'+l.it.id+'">'+esc(t("theyPaid"))+'</button>'+
+          '<button class="qbtn" data-quick="draw" data-p="'+l.it.id+'">'+esc(t("iLentMore"))+'</button></div>' : '')+
+      (op?'<div class="cbody">'+
+        (editing===l.it.id
+          ? formPanel(l.it.type,l.it,"ed_",t("save"),"savego")
+          : (l.it.type==="ltloan"?ltBody(l):l.it.type==="stloan"?stBody(l):l.it.type==="lease"?leaseBody(l):plainBody(l)))+
+        '</div>':'')+'</div>';
+  });
+  return h;
+}
+
+/* ---------- render ---------- */
+function render(){
+  var ys=years();
+  if(!S.year||ys.indexOf(S.year)<0)S.year=ys[0]||NOW.getFullYear();
+  var Y=S.year,R=evaluate(Y);
+  $("root").className="wrap"+(S.blur?" blurred":"");
+  var back=$("back"),mk=$("mark");
+  document.documentElement.lang=(S.lang==="zh")?"zh-CN":"en";
+  $("lang").textContent=t("lang");
+  $("more").textContent=t("more");
+  back.hidden=(VIEW==="home");
+  if(VIEW==="home"){mk.className="mark";mk.innerHTML='I<i>W</i>P';}
+  else{mk.className="mark page";mk.innerHTML=esc(M(VIEW).label);}
+  var ySel=$("year");
+  ySel.innerHTML=ys.map(function(y){return '<option value="'+y+'"'+(y===Y?" selected":"")+'>'+y+'</option>';}).join("");
+  $("foot").innerHTML=((VIEW==="home")
+    ? t("storedHere")+" \u00b7 "+(S.backupAt?t("lastBackup",{d:new Date(S.backupAt).toISOString().slice(0,10)}):t("neverBacked"))+
+      "<br>"+t("recompute")
+    : t("recompute"))+'<br><span style="opacity:.75">'+esc(APP_VER)+
+    (fbOK()?" \u00b7 "+esc(syncWord()):"")+'</span>';
+  screen.innerHTML=(VIEW==="home")?homeView(Y,R):modView(VIEW,Y,R);
+  $("undoSlot").innerHTML=undo
+    ? '<div class="undo"><span>'+esc(undo.label)+'</span><button id="undoBtn">'+esc(t("undo"))+'</button></div>' : "";
+  wire();
+}
+function setUndo(label,fn){
+  undo={label:label,fn:fn};
+  if(setUndo.t)clearTimeout(setUndo.t);
+  setUndo.t=setTimeout(function(){undo=null;render();},8000);
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  each("[data-i]",function(b){b.onclick=function(ev){
+    ev.stopPropagation();var k=b.getAttribute("data-i");
+    infoOpen=(infoOpen===k)?"":k;render();};});
+  each("[data-go]",function(b){b.onclick=function(){
+    VIEW=b.getAttribute("data-go");openCard={};addOpen=false;editing=null;q="";window.scrollTo(0,0);render();};});
+  each("[data-jump]",function(b){b.onclick=function(){
+    VIEW=b.getAttribute("data-jump");openCard={};openCard[b.getAttribute("data-item")]=true;
+    addOpen=false;editing=null;q="";window.scrollTo(0,0);render();};});
+  each("[data-quick]",function(b){b.onclick=function(){
+    var id=b.getAttribute("data-p");
+    openCard[id]=true;quickKind=b.getAttribute("data-quick");quickFor=id;editing=null;render();
+    var el=$("ma_"+id);if(el)setTimeout(function(){el.focus();},40);};});
+  each("[data-card]",function(b){b.onclick=function(){
+    var id=b.getAttribute("data-card");openCard[id]=!openCard[id];if(editing&&editing!==id)editing=null;render();};});
+
+  each("[data-del]",function(b){b.onclick=function(){
+    var id=b.getAttribute("data-del"),it=find(id);if(!it)return;
+    var copy=JSON.parse(JSON.stringify(it)),idx=S.items.indexOf(it);
+    S.items.splice(idx,1);delete openCard[id];editing=null;save();
+    setUndo(t("undoDeleted",{n:copy.name}),function(){S.items.splice(idx,0,copy);save();});
+    render();};});
+  each("[data-settle]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-settle"));if(!it)return;
+    if(it.settled){it.settled=false;delete it.settledOn;}
+    else{it.settled=true;it.settledOn=isoOf(NOW);}
+    save();render();};});
+  each("[data-edit]",function(b){b.onclick=function(){editing=b.getAttribute("data-edit");render();};});
+  each("[data-savego]",function(b){b.onclick=function(){
+    var it=find(editing);if(!it)return;
+    var o=readForm(it.type,"ed_"),err=$("ed_err"),msg=validate(it.type,o);
+    if(msg){err.textContent=msg;err.hidden=false;return;}
+    Object.keys(o).forEach(function(k){it[k]=o[k];});
+    editing=null;save();render();};});
+
+  each("[data-tick]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-tick")),k=b.getAttribute("data-k");if(!it)return;
+    it.paid=it.paid||{};
+    if(it.paid[k])delete it.paid[k];else it.paid[k]=isoOf(NOW);
+    save();render();};});
+  each("[data-delmv]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-on")),mid=b.getAttribute("data-delmv");if(!it)return;
+    var mv=(it.moves||[]).filter(function(m){return m.id===mid;})[0],idx=(it.moves||[]).indexOf(mv);
+    it.moves=(it.moves||[]).filter(function(m){return m.id!==mid;});save();
+    if(mv)setUndo(mv.kind==="repay"?t("undoRemovedPay",{v:money(Math.abs(+mv.amt||0))}):t("undoRemovedLend",{v:money(Math.abs(+mv.amt||0))}),
+      function(){it.moves.splice(idx,0,mv);save();});
+    render();};});
+  each("[data-addmv]",function(b){b.onclick=function(){
+    var pid=b.getAttribute("data-addmv"),it=find(pid);if(!it)return;
+    var err=document.querySelector('[data-mverr="'+pid+'"]');
+    var k=$("mk_"+pid).value==="draw"?"draw":"repay";
+    var a=num($("ma_"+pid).value),dt=$("md_"+pid).value;
+    function bad(m){if(err){err.textContent=m;err.hidden=false;}return true;}
+    if(err)err.hidden=true;
+    if(isNaN(a)&&bad(t("eAmtNotNumber")))return;
+    if(!(a>0)&&bad(t("eAmount")))return;
+    if(!validDate(dt)&&bad(t("eDate")))return;
+    if(P(dt)<P(it.start)&&bad(t("eBeforeLent")))return;
+    if(P(dt)>NOW&&bad(t("eFuture")))return;
+    if(k==="repay"&&it.type==="stloan"){
+      var W=stWalk(it,P(dt).getFullYear()),owed=stBalanceAt(it,P(dt));
+      /* a payoff usually covers the arrears too; tick those off rather than refusing */
+      if(a>owed+0.5){
+        if(a<=W.held+0.5){
+          W.rows.forEach(function(row){if(!row.paid&&P(row.due)<=P(dt)){it.paid=it.paid||{};it.paid[row.due]=dt;}});
+          a=Math.min(a,stBalanceAt(it,P(dt)));
+        } else if(bad(t("eMoreThanOwed",{v:money(W.held)})))return;
+      }
+    }
+    it.moves=it.moves||[];
+    it.moves.push({id:uid(),date:dt,amt:a,kind:k});
+    it.moves.sort(function(x,y){return x.date<y.date?-1:1;});
+    save();render();};});
+
+  each("[data-collect]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-collect"));if(!it)return;
+    var err=document.querySelector('[data-gerr="'+it.id+'"]');
+    if(err)err.hidden=true;
+    function bad(m){if(err){err.textContent=m;err.hidden=false;}return true;}
+    var v=num($("rc_"+it.id).value),dt=$("rd_"+it.id).value;
+    if(isNaN(v)&&bad(t("eAmtNotNumber")))return;
+    if(!(v>0)&&bad("Enter an amount."))return;
+    if(!validDate(dt)&&bad(t("eDate")))return;
+    if(!Array.isArray(it.gots))it.gots=((+it.got>0)?[{id:uid(),date:it.start,amt:+it.got}]:[]);
+    delete it.got;
+    var total=leaseGot(it)+v,earnedAll=(+it.rent||0)*(it.end?sliceInYear(it.start,it.end,P(it.end).getFullYear())+sliceInYear(it.start,it.end,P(it.start).getFullYear())*0:sliceInYear(it.start,"",NOW.getFullYear()));
+    var lifetime=(+it.rent||0)*(it.end?months(P(it.start),new Date(P(it.end).getFullYear(),P(it.end).getMonth(),P(it.end).getDate()+1)):months(P(it.start),NOW));
+    if(total>lifetime+0.5&&bad(t("eOverRent",{a:money(total),b:money(lifetime)})))return;
+    it.gots.push({id:uid(),date:dt,amt:v});
+    save();render();};});
+  each("[data-delgot]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-on")),gid=b.getAttribute("data-delgot");if(!it)return;
+    if(!Array.isArray(it.gots))it.gots=((+it.got>0)?[{id:"legacy",date:it.start,amt:+it.got}]:[]);
+    delete it.got;
+    var g=it.gots.filter(function(x){return x.id===gid;})[0],idx=it.gots.indexOf(g);
+    it.gots=it.gots.filter(function(x){return x.id!==gid;});save();
+    if(g)setUndo(t("undoRemovedRent",{v:money(+g.amt||0)}),function(){it.gots.splice(idx,0,g);save();});
+    render();};});
+
+  each("[data-close]",function(b){b.onclick=function(){
+    var it=find(b.getAttribute("data-close"));if(!it)return;
+    var err=document.querySelector('[data-cerr="'+it.id+'"]');
+    if(err)err.hidden=true;
+    function bad(m){if(err){err.textContent=m;err.hidden=false;}return true;}
+    var v=num($("cs_"+it.id).value),dt=$("cd_"+it.id).value;
+    if(isNaN(v)&&bad(t("eAmtNotNumber")))return;
+    if(!(v>0)&&bad(t("eSoldFor")))return;
+    if(!validDate(dt)&&bad(t("eDate")))return;
+    if(P(dt)>NOW&&bad(t("eFuture")))return;
+    if(it.bought&&P(dt)<P(it.bought)&&bad(t("eSellAfter")))return;
+    var prevRev=it.revenue,prevSold=it.sold;
+    it.revenue=v;it.sold=dt;save();
+    setUndo(t("undoSold",{n:it.name,v:money(v)}),function(){
+      it.revenue=prevRev;it.sold=prevSold;save();});
+    render();};});
+  if($("addToggle"))$("addToggle").onclick=function(){addOpen=!addOpen;editing=null;render();};
+  if($("addgo")||document.querySelector("[data-addgo]"))each("[data-addgo]",function(b){b.onclick=function(){
+    var t=VIEW,o=readForm(t,"fl_"),err=$("fl_err"),msg=validate(t,o);
+    if(msg){err.textContent=msg;err.hidden=false;return;}
+    o.id=uid();o.type=t;
+    if(t==="ltloan"||t==="stloan"){o.moves=[];o.paid={};}
+    if(t==="lease")o.got=0;
+    S.items.push(o);addOpen=false;flash="";save();render();};});
+
+  if($("q"))$("q").oninput=function(){q=$("q").value;
+    var pos=$("q").selectionStart;render();
+    var el=$("q");if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}};
+  if($("fxJump"))$("fxJump").onclick=function(){menuOpen=true;showFx();};
+  if($("undoBtn"))$("undoBtn").onclick=function(){
+    if(undo&&undo.fn)undo.fn();undo=null;if(setUndo.t)clearTimeout(setUndo.t);render();};
+}
+
+function showFx(pending){
+  var h=(S.fx||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;}).reverse();
+  var last=fxLatest();
+  var body='<div class="panel"><p class="hint" style="margin:0 0 4px"><b>'+esc(t("fxTitle"))+'</b></p>'+
+    '<p class="hint" style="margin:0 0 12px">'+esc(t("fxSub"))+'</p>';
+  if(pending){
+    var prev=last?(" \u00b7 "+t("fxChange",{p:Math.abs((pending.rate/last.rate-1)*100).toFixed(1),
+      dir:(pending.rate>last.rate)?t("weaker"):t("stronger"),d:last.date})):"";
+    body+='<p class="hint" style="margin:0 0 12px">'+esc(t("fxConfirm",{v:fmt(pending.rate)+" "+S.cur+"/"+(S.fxRef||"USD")}))+esc(prev)+'</p>'+
+      '<div class="ctl"><button class="chip" id="fxYes" aria-pressed="true">'+esc(t("fxYes"))+'</button>'+
+      '<button class="chip" id="fxNo">'+esc(t("fxNo"))+'</button></div>';
+  } else {
+    body+='<div class="grid">'+
+      '<div><label for="fxRate">'+esc(t("fxLabel",{c:S.fxRef||"USD",m:S.cur}))+'</label>'+
+        '<input id="fxRate" type="text" inputmode="decimal" autocomplete="off" value="'+(last?esc(last.rate):"")+'"></div>'+
+      '<div><label for="fxRef">'+esc(t("fxAgainst"))+'</label><select class="fld" id="fxRef">'+
+        ["USD","THB","SGD","CNY","CAD"].map(function(c){return '<option value="'+c+'"'+((S.fxRef||"USD")===c?" selected":"")+'>'+c+'</option>';}).join("")+
+        '</select></div>'+
+      '<div><label for="fxDate">'+esc(t("date"))+'</label><input id="fxDate" type="date" value="'+esc(isoOf(NOW))+'"></div>'+
+      '<button class="solid wide" id="fxGo">'+esc(t("fxSave"))+'</button></div>'+
+      '<p class="err" id="fxErr" hidden></p>';
+  }
+  body+='<p class="subhead">'+esc(t("fxHistory"))+'</p>';
+  if(!h.length)body+='<p class="hint" style="margin:0">'+esc(t("fxNone"))+'</p>';
+  else body+=h.slice(0,8).map(function(x,i){
+    var nxt=h[i+1],ch=nxt?((x.rate/nxt.rate-1)*100):null;
+    return '<div class="fxrow"><span class="d">'+esc(x.date)+'</span>'+
+      '<span class="r">'+esc(fmt(x.rate))+' '+esc(S.cur+"/"+(x.ref||S.fxRef||"USD"))+'</span>'+
+      (ch!==null?'<span class="c '+(ch>0?"up":"dn")+'">'+(ch>0?"+":"")+ch.toFixed(1)+'%</span>':'')+
+      '<button class="x" data-delfx="'+esc(x.id)+'">\u00d7</button></div>';}).join("");
+  body+='<div class="ctl" style="margin-top:12px"><button class="chip" id="fxDone">'+esc(t("done"))+'</button></div></div>';
+  $("menuSlot").innerHTML=body;
+  if(pending){
+    $("fxYes").onclick=function(){
+      S.fx=S.fx||[];
+      S.fx=S.fx.filter(function(x){return x.date!==pending.date;});
+      S.fx.push({id:uid(),date:pending.date,rate:pending.rate,ref:pending.ref});
+      S.fxRef=pending.ref;
+      var first=(S.fx.length===1);
+      save();showFx();
+      if(first)flash=t("fxFirst");
+      render();showFx();
+    };
+    $("fxNo").onclick=function(){showFx();};
+  } else {
+    $("fxGo").onclick=function(){
+      var err=$("fxErr");err.hidden=true;
+      var v=num($("fxRate").value),d=$("fxDate").value,ref=$("fxRef").value;
+      if(isNaN(v)||!(v>0)){err.textContent=t("eAmtNotNumber");err.hidden=false;return;}
+      if(!validDate(d)){err.textContent=t("eDate");err.hidden=false;return;}
+      showFx({rate:v,date:d,ref:ref});
+    };
+  }
+  each("[data-delfx]",function(b){b.onclick=function(){
+    var id=b.getAttribute("data-delfx");
+    S.fx=(S.fx||[]).filter(function(x){return x.id!==id;});save();render();showFx();};});
+  $("fxDone").onclick=function(){menuOpen=false;$("menuSlot").innerHTML="";render();};
+}
+/* ---------- chrome ---------- */
+$("back").onclick=function(){VIEW="home";openCard={};addOpen=false;editing=null;q="";window.scrollTo(0,0);render();};
+$("lang").onclick=function(){S.lang=(S.lang==="zh")?"en":"zh";save();
+  if(menuOpen){menuOpen=false;$("menuSlot").innerHTML="";releaseHold();}
+  render();};
+$("year").onchange=function(){S.year=+$("year").value;save();render();};
+$("more").onclick=function(){
+  menuOpen=!menuOpen;
+  if(!menuOpen){$("menuSlot").innerHTML="";return;}
+  $("menuSlot").innerHTML='<div class="panel"><div class="grid">'+
+    '<div><label for="curSel">'+esc(t("currency"))+'</label><select class="fld" id="curSel">'+
+      ["MMK","THB","USD","CAD","SGD"].map(function(c){return '<option value="'+c+'"'+(S.cur===c?" selected":"")+'>'+c+'</option>';}).join("")+
+      '</select></div>'+
+    '<div><label>'+esc(t("privacy"))+'</label><button class="chip" id="blurBtn" style="width:100%;padding:10px" aria-pressed="'+S.blur+'">'+
+      esc(S.blur?t("showFigures"):t("hideFigures"))+'</button></div>'+
+    '<div><label>'+esc(t("yourData"))+'</label><button class="chip" id="bkBtn" style="width:100%;padding:10px">'+esc(t("backUp"))+'</button></div>'+
+    '<div><label>&nbsp;</label><button class="chip" id="rsBtn" style="width:100%;padding:10px">'+esc(t("restoreFile"))+'</button></div>'+
+    '<div><label>&nbsp;</label><button class="chip" id="pasteBtn" style="width:100%;padding:10px">'+esc(t("restorePaste"))+'</button></div>'+
+    '<div><label>'+esc(t("forAccountant"))+'</label><button class="chip" id="csvBtn" style="width:100%;padding:10px">'+esc(t("exportSheet",{y:S.year}))+'</button></div>'+
+    '<div><label>'+esc(t("syncLabel"))+'</label><button class="chip" id="syncBtn" style="width:100%;padding:10px">'+
+      esc(syncWord())+'</button></div>'+
+    '<div><label>'+esc(t("fxTitle"))+'</label><button class="chip" id="fxBtn" style="width:100%;padding:10px">'+
+      esc(fxLatest()?(fxLatest().rate+" "+S.cur+"/"+(S.fxRef||"USD")):t("fxTitle"))+'</button></div>'+
+    '</div><p class="hint">'+esc(t("restoreNote"))+'</p></div>';
+  $("curSel").onchange=function(){S.cur=$("curSel").value;save();render();$("more").click();$("more").click();};
+  $("blurBtn").onclick=function(){S.blur=!S.blur;save();render();
+    $("blurBtn").textContent=S.blur?t("showFigures"):t("hideFigures");
+    $("blurBtn").setAttribute("aria-pressed",S.blur);};
+  $("bkBtn").onclick=function(){offer("iwp-"+isoOf(NOW)+".json",backupBlob(),"application/json",true);};
+  $("rsBtn").onclick=function(){$("impFile").click();};
+  $("fxBtn").onclick=function(){showFx();};
+  $("syncBtn").onclick=function(){showSync();};
+  $("pasteBtn").onclick=function(){
+    $("menuSlot").innerHTML='<div class="panel">'+
+      '<p class="hint" style="margin:0 0 10px">'+esc(t("pasteHere"))+'</p>'+
+      '<textarea class="datout" id="datin" placeholder="'+esc(t("pasteJSON"))+'"></textarea>'+
+      '<div class="ctl" style="margin-top:10px"><button class="chip" id="loadBtn">'+esc(t("loadIt"))+'</button>'+
+      '<button class="chip" id="cancelBtn">'+esc(t("cancel"))+'</button></div>'+
+      '<p class="err" id="pasteErr" hidden></p></div>';
+    $("cancelBtn").onclick=function(){menuOpen=false;$("menuSlot").innerHTML="";render();};
+    $("loadBtn").onclick=function(){
+      var err=$("pasteErr");err.hidden=true;
+      var d;try{d=JSON.parse($("datin").value);}catch(e){err.textContent=t("notJSON");err.hidden=false;return;}
+      ingest(d);};
+  };
+  $("csvBtn").onclick=function(){offer("iwp-"+S.year+".csv",csvBlob(S.year),"text/csv",false);};
+};
+/* some viewers block a page from saving a file; always show the text too,
+   so the data can be copied out whatever the surroundings allow */
+function offer(name,text,mime,isBackup){
+  var saved=false;
+  try{
+    var blob=new Blob([text],{type:mime}),a=document.createElement("a");
+    if("download" in a){
+      a.href=URL.createObjectURL(blob);a.download=name;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(a.href);},1500);saved=true;
+    }
+  }catch(e){}
+  if(isBackup){S.backupAt=Date.now();save();}
+  $("menuSlot").innerHTML='<div class="panel">'+
+    '<p class="hint" style="margin:0 0 10px">'+(saved?t("savedAs",{n:esc(name)}):"")+
+      t("noFileHint",{n:esc(name)})+'</p>'+
+    '<textarea class="datout" id="datout" readonly>'+esc(text)+'</textarea>'+
+    '<div class="ctl" style="margin-top:10px">'+
+      '<button class="chip" id="copyBtn">'+esc(t("copyClip"))+'</button>'+
+      '<button class="chip" id="doneBtn">'+esc(t("done"))+'</button></div></div>';
+  var ta=$("datout");
+  $("copyBtn").onclick=function(){
+    var btn=$("copyBtn");
+    function fallback(){try{ta.focus();ta.select();btn.textContent=t("selectCopy");}catch(e){}}
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){btn.textContent=t("copied");},fallback);
+    }else fallback();
+  };
+  $("doneBtn").onclick=function(){menuOpen=false;$("menuSlot").innerHTML="";render();releaseHold();};
+}
+function ingest(d){
+  if(d&&d.format==="iwp"&&Array.isArray(d.items)){
+    var before=S.items.slice(),n=restoreFrom(d);
+    flash=t("restored",{n:n});
+    setUndo(t("restored",{n:n}).replace(/<[^>]+>/g,""),function(){S.items=before;save();});
+  } else {
+    var res=importLedger(d);
+    if(!res.count&&!res.dupes){flash=t("noLoans");VIEW="home";render();return;}
+    if(!res.count&&res.dupes){
+      flash=t("nothingNew",{n:res.dupes});
+      VIEW="home";menuOpen=false;$("menuSlot").innerHTML="";render();return;}
+    var prev=S.items.slice();
+    S.items=S.items.concat(res.items);
+    flash=t("imported",{n:res.count})+(res.dupes?t("skippedDup",{n:res.dupes}):"");
+    setUndo(t("imported",{n:res.count}).replace(/<[^>]+>/g,""),function(){S.items=prev;save();});
+  }
+  VIEW="home";menuOpen=false;$("menuSlot").innerHTML="";save();render();
+}
+$("impFile").onchange=function(e){
+  var f=e.target.files[0];e.target.value="";if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var d;
+    try{d=JSON.parse(rd.result);}
+    catch(err){flash=t("badFile");VIEW="home";render();return;}
+    ingest(d);
+  };
+  rd.onerror=function(){flash=t("unreadable");VIEW="home";render();};
+  rd.readAsText(f);
+};
+
+
+/* =======================================================================
+   SYNC  —  the phone is the source of truth, the cloud is a backup and a
+   messenger. The app always draws from the device copy; Firebase only
+   carries changes between devices. Any of it can be down and the book
+   still opens and still saves.
+
+   Layout:  users/{uid}/iwp_chunks/{core|graves|ltloan|stloan|lease|cycle}
+   Chunked so that editing one loan rewrites one small document, never the
+   whole book, which keeps writes tiny and stays under the 1 MB doc limit.
+   ======================================================================= */
+var FB=null;                      /* this install's Firebase settings */
+try{FB=JSON.parse(localStorage.getItem(FBKEY)||"null");}catch(e){FB=null;}
+var SY={ready:false,user:null,busy:false,at:0,err:"",asking:null,hold:false,live:[],
+        sentTo:"",linking:false,askEmail:false,pasteLink:null};
+var LASTUP={};                    /* chunk -> what we last wrote, so we skip no-ops */
+var CH=["ltloan","stloan","lease","cycle"];
+var fb=null,fsdb=null,fsauth=null,pushTimer=null;
+
+function fbOK(){return !!(FB&&FB.apiKey&&FB.projectId&&FB.appId);}
+function syncOn(){return !!(SY.ready&&SY.user);}
+
+/* The SDK loads from plain <script defer> tags in the head, so by the time
+   boot finishes it is usually already there. We only wait for it. If it never
+   arrives the app carries on exactly as before — local only. */
+function loadFB(cb){
+  var t0=Date.now();
+  (function wait(){
+    if(window.firebase&&window.firebase.firestore)return cb(true);
+    if(Date.now()-t0>10000)return cb(false);
+    setTimeout(wait,120);
+  })();
+}
+function lastEmail(){try{return localStorage.getItem(MAILKEY)||"";}catch(e){return "";}}
+/* Completing a sign-in link. The address is remembered on the device that
+   asked for it; opening the link on a second device has nothing remembered,
+   so that device asks for the address rather than failing. */
+function finishLink(em,onErr,link){
+  var fromUrl=!link;
+  SY.linking=true;SY.askEmail=false;if(menuOpen)showSync();
+  fsauth.signInWithEmailLink(em,link||location.href).then(function(){
+    try{localStorage.setItem(MAILKEY,em);}catch(x){}
+    SY.linking=false;SY.askEmail=false;SY.sentTo="";
+    if(fromUrl){try{history.replaceState({},"",location.href.split("?")[0].split("#")[0]);}catch(x){}}
+    menuOpen=false;if($("menuSlot"))$("menuSlot").innerHTML="";
+    flash=t("syncHello");render();
+  },function(err){
+    SY.linking=false;SY.askEmail=true;
+    var m=String(err&&err.message||err);
+    if(onErr)onErr(m);else{SY.err=m;if(menuOpen)showSync();}
+  });
+}
+function checkLink(){
+  if(!SY.ready)return;
+  var isLink=false;
+  try{isLink=fsauth.isSignInWithEmailLink(location.href);}catch(e){}
+  if(!isLink)return;
+  var em=lastEmail();
+  if(em)finishLink(em);
+  else{SY.askEmail=true;showSync();}
+}
+function syncBoot(cb){
+  cb=cb||function(){};
+  if(!fbOK())return cb(false);
+  loadFB(function(ok){
+    if(!ok){SY.err=t("syncNoNet");paintSync();return cb(false);}
+    try{
+      if(!fb)fb=firebase.apps.length?firebase.app():firebase.initializeApp(FB);
+      fsauth=firebase.auth();fsdb=firebase.firestore();
+      SY.ready=true;
+      fsauth.onAuthStateChanged(function(u){
+        SY.user=u?{uid:u.uid,email:u.email}:null;
+        stopLive();
+        if(u)firstContact();
+        paintSync();
+      });
+      checkLink();
+      cb(true);
+    }catch(e){SY.err=String(e&&e.message||e);paintSync();cb(false);}
+  });
+}
+
+/* ---------- reading and writing the chunks ---------- */
+function chunkRef(name){return fsdb.collection("users").doc(SY.user.uid).collection("iwp_chunks").doc(name);}
+function packChunk(name){
+  if(name==="core")return {data:coreOf(),rev:S.rev.core||0};
+  if(name==="graves")return {dead:S.dead||{}};
+  var recs={},rev={};
+  S.items.forEach(function(it){
+    if(it.type!==name)return;
+    recs[it.id]=it;rev[it.id]=S.rev[it.id]||0;
+  });
+  return {recs:recs,rev:rev};
+}
+function pullAll(){
+  var names=["core","graves"].concat(CH);
+  return Promise.all(names.map(function(n){
+    return chunkRef(n).get().then(function(d){return {n:n,v:d.exists?d.data():null};},
+                                  function(){return {n:n,v:null};});
+  })).then(function(rows){
+    var out={core:null,graves:null,mods:{}},any=false;
+    rows.forEach(function(r){
+      if(!r.v)return;
+      any=true;
+      if(r.n==="core")out.core=r.v;
+      else if(r.n==="graves")out.graves=r.v;
+      else out.mods[r.n]=r.v;
+    });
+    out.any=any;
+    return out;
+  });
+}
+
+/* ---------- the merge: per record, newest wins ---------- */
+function mergeCloud(cloud){
+  var localBy={};S.items.forEach(function(it){localBy[it.id]=it;});
+  var cloudBy={},cloudRev={};
+  Object.keys(cloud.mods||{}).forEach(function(ty){
+    var c=cloud.mods[ty]||{},recs=c.recs||{},rv=c.rev||{};
+    Object.keys(recs).forEach(function(id){cloudBy[id]=recs[id];cloudRev[id]=rv[id]||0;});
+  });
+  var cloudDead=(cloud.graves&&cloud.graves.dead)||{};
+  var ids={};
+  [localBy,cloudBy,S.dead,cloudDead].forEach(function(m){Object.keys(m||{}).forEach(function(k){ids[k]=1;});});
+
+  var keep=[],rev={},dead={},changed=false;
+  Object.keys(ids).forEach(function(id){
+    var lr=S.rev[id]||0,ld=S.dead[id]||0,cr=cloudRev[id]||0,cd=cloudDead[id]||0;
+    var lt=Math.max(lr,ld),ct=Math.max(cr,cd),useCloud;
+    if(ct!==lt)useCloud=ct>lt;
+    else useCloud=ct>0?true:!localBy[id];   /* a tie goes to the cloud so every device agrees */
+    var wasDeleted=(ld>=lr&&ld>0),willDelete;
+    if(useCloud){
+      willDelete=(cd>=cr&&cd>0);
+      if(willDelete)dead[id]=cd;
+      else if(cloudBy[id]){keep.push(cloudBy[id]);rev[id]=cr;}
+      if(!willDelete&&cloudBy[id]&&sig(cloudBy[id])!==sig(localBy[id]))changed=true;
+      if(willDelete&&localBy[id])changed=true;
+    }else{
+      if(wasDeleted)dead[id]=ld;
+      else if(localBy[id]){keep.push(localBy[id]);rev[id]=lr;}
+    }
+  });
+  /* settings move as one record */
+  var cRev=(cloud.core&&cloud.core.rev)||0,lRev=S.rev.core||0;
+  if(cloud.core&&cloud.core.data&&cRev>=lRev&&cRev>0){
+    var d=cloud.core.data;
+    if(d.cur)S.cur=d.cur;
+    if(d.lang)S.lang=d.lang;
+    if(Array.isArray(d.fx))S.fx=d.fx;
+    if(d.fxRef)S.fxRef=d.fxRef;
+    if(typeof d.blur==="boolean")S.blur=d.blur;
+    rev.core=cRev;
+    if(sig(d)!==sig(coreOf()))changed=true;
+  }else rev.core=lRev;
+
+  S.items=keep;S.rev=rev;S.dead=dead;
+  return changed;
+}
+
+/* ---------- pushing: only the chunks that actually differ ---------- */
+function syncPush(){
+  if(!syncOn())return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(doPush,700);          /* let a burst of edits settle */
+}
+function doPush(){
+  if(!syncOn())return;
+  var names=["core","graves"].concat(CH),writes=[];
+  names.forEach(function(n){
+    var body=packChunk(n),g=sig(body);
+    if(LASTUP[n]===g)return;                 /* nothing differs: write nothing */
+    LASTUP[n]=g;
+    writes.push(chunkRef(n).set(body));
+  });
+  if(!writes.length)return;
+  SY.busy=true;paintSync();
+  Promise.all(writes).then(function(){
+    SY.busy=false;SY.at=Date.now();SY.err="";paintSync();
+  },function(e){
+    SY.busy=false;SY.err=String(e&&e.message||e);paintSync();
+  });
+}
+
+/* ---------- live updates from the other devices ---------- */
+function stopLive(){SY.live.forEach(function(u){try{u();}catch(e){}});SY.live=[];}
+function startLive(){
+  if(!syncOn())return;
+  stopLive();
+  ["core","graves"].concat(CH).forEach(function(n){
+    SY.live.push(chunkRef(n).onSnapshot(function(){incoming();},function(){}));
+  });
+}
+var pendingIncoming=false;
+function incoming(){
+  if(!syncOn())return;
+  /* never redraw under someone's hands: a sheet open means wait */
+  if(SY.hold||menuOpen||addOpen||editing){pendingIncoming=true;return;}
+  pendingIncoming=false;
+  pullAll().then(function(cloud){
+    if(!cloud.any)return;
+    var changed=mergeCloud(cloud);
+    seedSeen(0);
+    var j;try{j=JSON.stringify(S);}catch(e){return;}
+    try{localStorage.setItem(KEY,j);}catch(e){}
+    idbPut(KEY,j);
+    SY.at=Date.now();
+    if(changed)render();else paintSync();
+    doPush();                                 /* hand back anything only we had */
+  },function(e){SY.err=String(e&&e.message||e);paintSync();});
+}
+function releaseHold(){if(pendingIncoming)setTimeout(incoming,80);}
+
+/* ---------- first contact: a device with data meets an account with other data ---------- */
+function firstContact(){
+  if(!syncOn())return;
+  pullAll().then(function(cloud){
+    var cloudCount=0;
+    Object.keys(cloud.mods||{}).forEach(function(ty){cloudCount+=Object.keys((cloud.mods[ty]||{}).recs||{}).length;});
+    var mine=S.items.length;
+    if(!cloud.any||cloudCount===0){          /* empty account: this device seeds it */
+      LASTUP={};doPush();startLive();return;
+    }
+    if(mine===0){                             /* empty device: take the account's copy */
+      mergeCloud(cloud);seedSeen(0);
+      try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+      idbPut(KEY,JSON.stringify(S));
+      LASTUP={};startLive();render();return;
+    }
+    /* both sides hold a book. Never guess — ask, and keep a copy of the loser. */
+    SY.asking={cloud:cloud,cloudCount:cloudCount,mine:mine};
+    paintSync();
+  },function(e){SY.err=String(e&&e.message||e);paintSync();});
+}
+function answerFirst(which){
+  var a=SY.asking;if(!a)return;
+  var before=backupBlob();
+  SY.asking=null;
+  if(which==="cloud"){
+    S.items=[];S.rev={};S.dead={};
+    mergeCloud(a.cloud);
+  }else{
+    /* keep this device: bury everything the account holds that we do not */
+    var now=Date.now();
+    Object.keys(a.cloud.mods||{}).forEach(function(ty){
+      var recs=(a.cloud.mods[ty]||{}).recs||{};
+      Object.keys(recs).forEach(function(id){
+        if(!S.items.some(function(it){return it.id===id;}))S.dead[id]=now;
+      });
+    });
+    S.items.forEach(function(it){S.rev[it.id]=now;});
+    S.rev.core=now;
+  }
+  seedSeen(0);
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  idbPut(KEY,JSON.stringify(S));
+  LASTUP={};doPush();startLive();
+  flash=t("syncReplaced");
+  render();
+  /* the copy that lost is handed back as a file, never silently dropped */
+  setTimeout(function(){offer("iwp-before-sync-"+isoOf(new Date())+".json",before,"application/json",false);},40);
+}
+
+
+/* ---------- the sync panel ---------- */
+function syncWord(){
+  if(!fbOK())return t("syncOff");
+  if(SY.err)return t("syncProblem");
+  if(!SY.user)return t("syncSignedOut");
+  if(SY.busy)return t("syncSaving");
+  if(SY.at)return t("syncedAt",{d:new Date(SY.at).toLocaleTimeString()});
+  return t("syncOn");
+}
+function paintSync(){
+  var el=$("syncWord");if(el)el.textContent=syncWord();
+  var b=$("syncBtn");if(b)b.textContent=syncWord();
+  if(SY.asking&&menuOpen)showSync();
+}
+function showSync(){
+  menuOpen=true;
+  var h='<div class="panel">';
+  if(SY.asking){
+    h+='<p class="subhead" style="margin-top:0">'+esc(t("syncWhich"))+'</p>'+
+       '<p class="hint">'+esc(t("syncWhichNote",{a:SY.asking.mine,b:SY.asking.cloudCount}))+'</p>'+
+       '<div class="ctl" style="margin-top:10px">'+
+         '<button class="chip" id="keepMine">'+esc(t("syncKeepDevice",{n:SY.asking.mine}))+'</button>'+
+         '<button class="chip" id="keepCloud">'+esc(t("syncKeepAccount",{n:SY.asking.cloudCount}))+'</button>'+
+       '</div></div>';
+    $("menuSlot").innerHTML=h;
+    $("keepMine").onclick=function(){answerFirst("mine");};
+    $("keepCloud").onclick=function(){answerFirst("cloud");};
+    return;
+  }
+  if(!fbOK()){
+    h+='<p class="subhead" style="margin-top:0">'+esc(t("syncSetup"))+'</p>'+
+       '<p class="hint">'+esc(t("syncPasteNote"))+'</p>'+
+       '<textarea class="datout" id="fbin" placeholder=\'{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}\'></textarea>'+
+       '<div class="ctl" style="margin-top:10px"><button class="solid" id="fbSave">'+esc(t("syncSave"))+'</button>'+
+       '<button class="chip" id="fbCancel">'+esc(t("cancel"))+'</button></div>'+
+       '<p class="err" id="fbErr" hidden></p></div>';
+    $("menuSlot").innerHTML=h;
+    $("fbCancel").onclick=function(){menuOpen=false;$("menuSlot").innerHTML="";render();};
+    $("fbSave").onclick=function(){
+      var e=$("fbErr");e.hidden=true;
+      var raw=$("fbin").value||"",cfg=null;
+      /* accept the whole snippet Firebase hands you, or just the values */
+      try{cfg=JSON.parse(raw);}catch(x){
+        var m=raw.match(/\{[\s\S]*\}/);
+        if(m){try{cfg=JSON.parse(m[0].replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g,'$1"$2":').replace(/'/g,'"').replace(/,\s*([}\]])/g,'$1'));}catch(y){}}
+      }
+      if(!cfg||!cfg.apiKey||!cfg.projectId||!cfg.appId){e.textContent=t("syncBadCfg");e.hidden=false;return;}
+      FB={apiKey:cfg.apiKey,authDomain:cfg.authDomain||(cfg.projectId+".firebaseapp.com"),
+          projectId:cfg.projectId,appId:cfg.appId};
+      try{localStorage.setItem(FBKEY,JSON.stringify(FB));}catch(x){}
+      SY.err="";syncBoot(function(){showSync();});
+      showSync();
+    };
+    return;
+  }
+  if(!SY.user){
+    /* Sign-in by emailed link, on purpose. A credential form on a free hosting
+       address next to money figures is what a phishing filter is built to
+       catch, and this is also one less thing to remember on three devices. */
+    if(SY.linking){
+      h+='<p class="subhead" style="margin-top:0">'+esc(t("syncSignIn"))+'</p>'+
+         '<p class="hint">'+esc(t("syncSigningIn"))+'</p></div>';
+      $("menuSlot").innerHTML=h;return;
+    }
+    if(SY.askEmail){                       /* link opened on a device that never typed the address */
+      h+='<p class="subhead" style="margin-top:0">'+esc(t("syncConfirm"))+'</p>'+
+         '<p class="hint">'+esc(t("syncConfirmNote"))+'</p>'+
+         '<div class="grid"><div><label for="syEmail">'+esc(t("syncEmail"))+'</label>'+
+           '<input id="syEmail" type="email" autocomplete="email" value=""></div>'+
+           '<button class="solid wide" id="syFinish">'+esc(t("syncFinish"))+'</button></div>'+
+         '<p class="err" id="syErr" hidden></p></div>';
+      $("menuSlot").innerHTML=h;
+      $("syFinish").onclick=function(){
+        var e=$("syErr");e.hidden=true;
+        var em=($("syEmail").value||"").trim();
+        if(!em){e.textContent=t("syncNeedEmail");e.hidden=false;return;}
+        finishLink(em,function(msg){e.textContent=msg;e.hidden=false;},SY.pasteLink||null);
+      };
+      return;
+    }
+    if(SY.sentTo){
+      h+='<p class="subhead" style="margin-top:0">'+esc(t("syncCheckMail"))+'</p>'+
+         '<p class="hint">'+esc(t("syncSentNote",{e:SY.sentTo}))+'</p>'+
+         '<p class="subhead">'+esc(t("syncOrPaste"))+'</p>'+
+         '<p class="hint">'+esc(t("syncPasteHint"))+'</p>'+
+         '<div class="grid"><div><label for="syLink">'+esc(t("syncLinkLbl"))+'</label>'+
+           '<input id="syLink" type="text" autocomplete="off" value=""></div>'+
+           '<button class="solid wide" id="syPaste">'+esc(t("syncFinish"))+'</button></div>'+
+         '<p class="err" id="syErr" hidden></p>'+
+         '<div class="ctl" style="margin-top:10px"><button class="chip" id="syAgain">'+esc(t("syncAnother"))+'</button></div></div>';
+      $("menuSlot").innerHTML=h;
+      $("syAgain").onclick=function(){SY.sentTo="";showSync();};
+      $("syPaste").onclick=function(){
+        var e=$("syErr");e.hidden=true;
+        var lk=($("syLink").value||"").trim();
+        if(!lk){e.textContent=t("syncNeedLink");e.hidden=false;return;}
+        var good=false;try{good=fsauth.isSignInWithEmailLink(lk);}catch(x){}
+        if(!good){e.textContent=t("syncBadLink");e.hidden=false;return;}
+        finishLink(SY.sentTo||lastEmail(),function(m){e.textContent=m;e.hidden=false;},lk);
+      };
+      return;
+    }
+    h+='<p class="subhead" style="margin-top:0">'+esc(t("syncSignIn"))+'</p>'+
+       '<p class="hint">'+esc(t("syncSignInNote"))+'</p>'+
+       '<div class="grid"><div><label for="syEmail">'+esc(t("syncEmail"))+'</label>'+
+         '<input id="syEmail" type="email" autocomplete="email" value="'+esc(lastEmail())+'"></div>'+
+         '<button class="solid wide" id="syIn">'+esc(t("syncEmailMe"))+'</button></div>'+
+       '<div class="ctl" style="margin-top:10px"><button class="chip" id="syCfg">'+esc(t("syncChange"))+'</button></div>'+
+       '<p class="err" id="syErr" hidden></p>'+
+       '<p class="hint" style="margin-top:8px">'+esc(syncWord())+'</p></div>';
+    $("menuSlot").innerHTML=h;
+    $("syIn").onclick=function(){
+      var e=$("syErr");e.hidden=true;
+      var em=($("syEmail").value||"").trim();
+      if(!em||em.indexOf("@")<1){e.textContent=t("syncNeedEmail");e.hidden=false;return;}
+      if(!SY.ready){e.textContent=t("syncNoNet");e.hidden=false;return;}
+      fsauth.sendSignInLinkToEmail(em,{url:location.href.split("?")[0].split("#")[0],handleCodeInApp:true})
+        .then(function(){
+          try{localStorage.setItem(MAILKEY,em);}catch(x){}
+          SY.sentTo=em;showSync();
+        },function(err){e.textContent=String(err&&err.message||err);e.hidden=false;});
+    };
+    $("syCfg").onclick=function(){FB=null;try{localStorage.removeItem(FBKEY);}catch(x){}showSync();};
+    return;
+  }
+  h+='<p class="subhead" style="margin-top:0">'+esc(t("syncTitle"))+'</p>'+
+     '<dl class="dl"><dt>'+esc(t("syncAccount"))+'</dt><dd class="q">'+esc(SY.user.email||"")+'</dd></dl>'+
+     '<dl class="dl"><dt>'+esc(t("syncStatus"))+'</dt><dd class="q" id="syncWord">'+esc(syncWord())+'</dd></dl>'+
+     (SY.err?'<p class="err">'+esc(SY.err)+'</p>':'')+
+     '<p class="hint">'+esc(t("syncNote"))+'</p>'+
+     '<div class="ctl" style="margin-top:10px"><button class="chip" id="syNow">'+esc(t("syncNow"))+'</button>'+
+     '<button class="chip" id="syOut">'+esc(t("syncSignOut"))+'</button></div></div>';
+  $("menuSlot").innerHTML=h;
+  $("syNow").onclick=function(){LASTUP={};incoming();doPush();paintSync();};
+  $("syOut").onclick=function(){try{fsauth.signOut();}catch(x){}stopLive();menuOpen=false;$("menuSlot").innerHTML="";render();};
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  var went=false;
+  var go=function(mirror){
+    if(went)return;went=true;
+    /* localStorage can be cleared by the phone while IndexedDB survives */
+    if((!S.items||!S.items.length)&&mirror){
+      try{var m=JSON.parse(mirror);if(m&&Array.isArray(m.items)&&m.items.length)S=Object.assign(S,m);}catch(e){}
+      if(!S.rev)S.rev={};if(!S.dead)S.dead={};
+    }
+    /* Earlier versions kept holdings and loose cash entries. This book follows
+       cash from lending, trading and leasing only, so anything else is set
+       aside rather than loaded; it stays in any backup file already saved. */
+    var had=S.items.length;
+    S.items=S.items.filter(known);
+    var dropped=had-S.items.length,fresh=false;
+    if(!S.items.length&&!S.seeded){S.seeded=true;S.items=SEED.slice();fresh=true;}
+    seedSeen(Date.now());
+    loaded=true;
+    if(dropped>0)flash=t("setAside",{n:dropped});
+    if(dropped>0||fresh)save();
+    render();
+    syncBoot();
+  };
+  setTimeout(function(){go(null);},1500);     /* a blocked database must never hold the app */
+  idbGet(KEY,go);
+}
+
+var SEED=[
+    {id:"a1",type:"ltloan",name:"U Kyaw Thant",amount:10000000,rate:2,start:"2025-06-15",note:"land title held",
+      moves:[{id:"m1",date:"2026-03-01",amt:5000000,kind:"repay"}]},
+    {id:"a2",type:"ltloan",name:"Ko Min Naing",amount:6000000,rate:1.5,start:"2026-01-20",note:"",moves:[]},
+    {id:"a3",type:"stloan",name:"Daw Nilar",amount:4000000,rate:3,start:"2026-02-01",note:"2 gold bangles",
+      paid:{"2026-03-01":"2026-03-02","2026-04-01":"2026-04-01","2026-05-01":"2026-05-04",
+            "2026-06-01":"2026-06-02","2026-07-01":"2026-07-01","2026-08-01":"2026-08-03","2026-09-01":"2026-09-01"},moves:[]},
+    {id:"a4",type:"stloan",name:"U Aye Win",amount:12000000,rate:2.5,start:"2025-12-10",note:"",
+      paid:{"2026-01-10":"2026-01-11","2026-02-10":"2026-02-10","2026-03-10":"2026-03-12","2026-04-10":"2026-04-10",
+            "2026-05-10":"2026-05-11","2026-06-10":"2026-06-10","2026-07-10":"2026-07-12"},
+      moves:[{id:"m2",date:"2026-06-01",amt:3000000,kind:"repay"}]},
+    {id:"a5",type:"lease",name:"Riverside plot, 7 acres",rent:7500000,start:"2026-02-16",end:"2026-08-15",got:45000000},
+    {id:"a6",type:"lease",name:"Shop lot, Insein road",rent:2200000,start:"2025-10-01",end:"",got:15400000},
+    {id:"a7",type:"cycle",name:"Corn, 40 tonnes",cost:28000000,extra:1850000,bought:"2026-01-12",revenue:35500000,sold:"2026-05-20"},
+    {id:"a7b",type:"cycle",name:"Corn, 25 tonnes",cost:16500000,extra:0,bought:"2026-07-08",revenue:0,sold:""}
+  ];
+boot();
+window.__IWP={L:L,S:S,APP_VER:APP_VER,answerFirst:answerFirst,fbOK:fbOK,SY:SY,mergeCloud:mergeCloud,packChunk:packChunk,trackLocal:trackLocal,seedSeen:seedSeen,
+  coreOf:coreOf,syncWord:syncWord,setLoaded:function(v){loaded=v;},isLoaded:function(){return loaded;},evaluate:evaluate,num:num,csvBlob:csvBlob,debtors:debtors,leaseGot:leaseGot,sameAs:sameAs,
+  aging:aging,xirr:xirr,cashFlows:cashFlows,fxChange:fxChange,avgRate:avgRate,fxLatest:fxLatest,t:t,M:M,lineFor:lineFor,attention:attention,health:health,modSummary:modSummary,
+  ltWalk:ltWalk,stWalk:stWalk,stBalanceAt:stBalanceAt,importLedger:importLedger,restoreFrom:restoreFrom,
+  backupBlob:backupBlob,validate:validate,FIELDS:FIELDS,money:money,ear:ear,render:render,
+  years:years,ORDER:ORDER,MODS:MODS,homeView:homeView,modView:modView,uid:uid,isoOf:isoOf,NOW:NOW,save:save};
+})();
+/* Installable and offline. A missing sw.js is not an error — the book runs
+   the same without it, which is how it behaves inside a preview or on file://. */
+if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  });
+}
+</script>
