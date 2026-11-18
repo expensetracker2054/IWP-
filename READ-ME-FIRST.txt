@@ -1,0 +1,24 @@
+IWP — deploy bundle
+===================
+Upload these files INDIVIDUALLY (not the zip, not the folder) into your
+GitHub repo, then commit:
+
+    index.html   manifest.json   sw.js
+    icon-192.png   icon-512.png   apple-touch-icon.png
+
+Every release after this one: bump APP_VER near the top of index.html AND
+CACHE at the top of sw.js to the same number, and upload BOTH files. If you
+only upload index.html, phones keep serving the old build.
+
+Turning sync on (once per device)
+---------------------------------
+1. Open daily-spend's index.html and copy the firebaseConfig values
+   (apiKey, authDomain, projectId, appId).
+2. In IWP: More > Across your devices > paste them > Save and connect.
+3. Sign in with the SAME email and password you use for the expense tracker.
+   Repeat 2-3 on the iPad and the PC.
+
+No Firestore rules change is needed: the existing users/{uid} rule already
+covers this app's path, users/{uid}/iwp_chunks/...
+
+Stay on Firebase's Spark plan. Never click Upgrade to Blaze.
